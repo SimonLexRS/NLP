@@ -191,11 +191,11 @@ async function ejecutarAnalisis(texto) {
   mostrarEstado("Analizando...", "info");
   setAnalizando(true);
 
-  // Mostrar área de análisis vivo YA (pipeline no debe esperar al final).
+  // Mostrar pipeline YA (resultados solo al final).
   const vivos = el("analisis-vivo");
   if (vivos) vivos.style.display = "block";
   const resultados = el("resultados");
-  if (resultados) resultados.style.display = "block";
+  if (resultados) resultados.style.display = "none";
 
   const detalle = el("resultados-detalle");
   if (detalle) detalle.style.display = "none";
@@ -214,6 +214,12 @@ async function ejecutarAnalisis(texto) {
     pv.setLiveData("input", { words: nWords, chars: texto.length });
     await pv.completarEtapa("input", `${nWords} palabras`);
     if (pv.isLearnMode()) pv.focusStage("input");
+  }
+
+  // Llevar el pipeline al viewport para ver el progreso en vivo (sobre todo en móvil).
+  if (vivos) {
+    const móvil = window.matchMedia("(max-width: 900px)").matches;
+    vivos.scrollIntoView({ behavior: "smooth", block: móvil ? "start" : "nearest" });
   }
 
   let rTrans = null;
@@ -344,6 +350,7 @@ async function ejecutarAnalisis(texto) {
     renderConsenso(rNB, rLogReg, rTrans, rSens, sentFinal, catConsenso);
     await pv.completarEtapa("consenso", catConsenso);
 
+    if (resultados) resultados.style.display = "block";
     if (detalle) detalle.style.display = "block";
     mostrarEstado("Análisis completo.", "ok");
   } catch (e) {

@@ -666,9 +666,12 @@ input[type="url"]:focus {
 .pipeline-nodo-progress {
   margin-top: 8px;
   width: 100%;
-  display: flex;
+  display: none;
   align-items: center;
   gap: 6px;
+}
+.pipeline-nodo-progress.is-loading {
+  display: flex;
 }
 .pipeline-progress-track {
   flex: 1;
@@ -818,10 +821,29 @@ input[type="url"]:focus {
 
 /* Timeline móvil */
 @media (max-width: 900px) {
+  .pipeline-viz-container {
+    padding: 14px 12px 16px;
+  }
+  .pipeline-viz-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .pipeline-viz-controls {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .pipeline-learn-toggle {
+    flex: 1 1 auto;
+    text-align: center;
+  }
   .pipeline-viz-nodos {
     flex-direction: column;
     align-items: stretch;
     overflow-x: visible;
+    gap: 0;
+    padding-bottom: 4px;
   }
   .pipeline-nodo {
     flex-direction: row;
@@ -829,18 +851,24 @@ input[type="url"]:focus {
     min-width: 0;
     width: 100%;
     align-items: center;
+    padding: 12px 14px;
+    gap: 12px;
+  }
+  .pipeline-nodo-contenido {
+    flex: 1;
   }
   .pipeline-nodo-status {
     position: static;
     margin-left: auto;
+    flex-shrink: 0;
   }
   .pipeline-conector {
-    flex: 0 0 16px;
-    min-width: 16px;
-    height: 16px;
+    flex: 0 0 18px;
+    min-width: 18px;
+    height: 18px;
     width: 100%;
     justify-content: flex-start;
-    padding-left: 22px;
+    padding-left: 26px;
   }
   .pipeline-conector-line {
     width: 2px;
@@ -855,10 +883,21 @@ input[type="url"]:focus {
   }
   .pipeline-grupo {
     flex-direction: column;
+    gap: 8px;
   }
   .pipeline-grupo .pipeline-nodo {
     max-width: none;
     min-width: 0;
+  }
+  .pipeline-teach-slot {
+    margin-top: 14px;
+    padding-top: 14px;
+  }
+  .pipeline-teach-diagram {
+    padding: 8px 4px;
+  }
+  .pipeline-teach-diagram .edu-svg {
+    max-width: 100%;
   }
 }
 

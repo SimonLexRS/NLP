@@ -50,7 +50,7 @@ function nodoHTML(etapa) {
         <div class="pipeline-nodo-titulo">${etapa.label}</div>
         <div class="pipeline-nodo-sub" data-pv="sub-${etapa.id}">${etapa.sub}</div>
         <div class="pipeline-nodo-resultado" data-pv="resultado-${etapa.id}"></div>
-        <div class="pipeline-nodo-progress" data-pv="progress-${etapa.id}" hidden>
+        <div class="pipeline-nodo-progress" data-pv="progress-${etapa.id}">
           <div class="pipeline-progress-track">
             <div class="pipeline-progress-bar" data-pv="bar-${etapa.id}"></div>
           </div>
@@ -216,6 +216,18 @@ export function render(container) {
   bindNodeClicks();
 }
 
+function ocultarProgreso(id) {
+  const progress = $pv(`progress-${id}`);
+  const bar = $pv(`bar-${id}`);
+  const pctEl = $pv(`pct-${id}`);
+  if (progress) {
+    progress.classList.remove("is-loading");
+    progress.hidden = true;
+  }
+  if (bar) bar.style.width = "0%";
+  if (pctEl) pctEl.textContent = "0%";
+}
+
 export function reset() {
   if (!containerRef) return;
   focusedStage = null;
@@ -231,7 +243,12 @@ export function reset() {
     r.innerHTML = "";
   }
   for (const p of containerRef.querySelectorAll(".pipeline-nodo-progress")) {
+    p.classList.remove("is-loading");
     p.hidden = true;
+    const bar = p.querySelector(".pipeline-progress-bar");
+    const pct = p.querySelector(".pipeline-progress-pct");
+    if (bar) bar.style.width = "0%";
+    if (pct) pct.textContent = "0%";
   }
   for (const c of containerRef.querySelectorAll(".pipeline-conector")) {
     c.classList.remove("activo", "done");
@@ -292,7 +309,10 @@ export function actualizarProgreso(id, pct, file) {
   const bar = $pv(`bar-${id}`);
   const pctEl = $pv(`pct-${id}`);
   const sub = $pv(`sub-${id}`);
-  if (wrap) wrap.hidden = false;
+  if (wrap) {
+    wrap.hidden = false;
+    wrap.classList.add("is-loading");
+  }
   const p = Math.max(0, Math.min(100, Number(pct) || 0));
   if (bar) bar.style.width = `${p}%`;
   if (pctEl) pctEl.textContent = `${p.toFixed(0)}%`;
@@ -307,8 +327,7 @@ export async function completarEtapa(id, resultado) {
   if (!nodo) return;
   const spinner = $pv(`spinner-${id}`);
   if (spinner) spinner.className = "pipeline-nodo-status";
-  const progress = $pv(`progress-${id}`);
-  if (progress) progress.hidden = true;
+  ocultarProgreso(id);
   nodo.className = "pipeline-nodo done";
   if (focusedStage === id) nodo.classList.add("focus-edu");
   completarConectorPrev(id);
@@ -324,8 +343,7 @@ export function errorEtapa(id, msg) {
   if (!nodo) return;
   const spinner = $pv(`spinner-${id}`);
   if (spinner) spinner.className = "pipeline-nodo-status";
-  const progress = $pv(`progress-${id}`);
-  if (progress) progress.hidden = true;
+  ocultarProgreso(id);
   nodo.className = "pipeline-nodo error";
   completarConectorPrev(id);
   const res = $pv(`resultado-${id}`);
@@ -339,8 +357,7 @@ export function omitirEtapa(id, msg) {
   if (!nodo) return;
   const spinner = $pv(`spinner-${id}`);
   if (spinner) spinner.className = "pipeline-nodo-status";
-  const progress = $pv(`progress-${id}`);
-  if (progress) progress.hidden = true;
+  ocultarProgreso(id);
   nodo.className = "pipeline-nodo skipped";
   completarConectorPrev(id);
   const res = $pv(`resultado-${id}`);
