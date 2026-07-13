@@ -5,6 +5,7 @@
   --space-2: 8px;
   --space-3: 12px;
   --space-4: 16px;
+  --space-5: 20px;
   --space-6: 24px;
   --space-8: 32px;
   --space-12: 48px;
@@ -139,18 +140,20 @@ main.container {
 /* ---------- Tabs ---------- */
 .tabs-nav {
   padding-top: var(--space-4);
-  margin-bottom: var(--space-2);
+  margin-bottom: var(--space-1);
   position: relative;
   width: 100%;
   max-width: 100%;
   min-width: 0;
+  display: flex;
+  justify-content: center;
 }
 .tabs-track {
   display: flex;
+  justify-content: flex-start;
   gap: 2px;
   overflow-x: auto;
   padding: 3px;
-  padding-right: 28px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -158,10 +161,11 @@ main.container {
   scrollbar-width: thin;
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
-  width: 100%;
+  width: fit-content;
   max-width: 100%;
   min-width: 0;
   box-sizing: border-box;
+  margin: 0 auto;
 }
 .tabs-nav::after {
   content: "";
@@ -170,9 +174,11 @@ main.container {
   top: var(--space-4);
   right: 0;
   bottom: 0;
-  width: 36px;
+  width: 0;
+  opacity: 0;
   border-radius: 0 var(--radius-md) var(--radius-md) 0;
-  background: linear-gradient(90deg, transparent, var(--bg, #eef1f4) 70%);
+  background: linear-gradient(90deg, transparent, var(--bg, #eef1f4) 72%);
+  transition: opacity var(--duration-fast) var(--ease);
 }
 .tab {
   background: transparent;
@@ -204,11 +210,10 @@ main.container {
 }
 .tab-panel {
   display: none;
-  padding: var(--space-6) 0 var(--space-8);
+  padding: var(--space-5) 0 var(--space-8);
 }
 .tab-panel.active {
   display: block;
-  min-height: 50vh;
 }
 
 .panel-heading {
@@ -221,7 +226,6 @@ main.container {
   margin: var(--space-6) 0 var(--space-3);
 }
 .section-title {
-  font-size: var(--text-base);
   font-weight: 600;
   margin-bottom: var(--space-4);
   color: var(--muted);
@@ -266,6 +270,16 @@ input[type="file"] {
   background: var(--surface);
   color: var(--ink);
   transition: border-color var(--duration-fast) var(--ease), box-shadow var(--duration-fast) var(--ease);
+}
+input[type="file"] {
+  padding: 12px;
+  background: var(--surface-raised);
+  border-style: dashed;
+  cursor: pointer;
+}
+input[type="file"]:hover {
+  border-color: var(--accent);
+  background: var(--accent-subtle);
 }
 textarea {
   resize: vertical;
@@ -317,6 +331,10 @@ input[type="url"]:focus {
   flex-wrap: wrap;
 }
 .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
   padding: 11px 20px;
   border: none;
   border-radius: var(--radius-md);
@@ -324,7 +342,9 @@ input[type="url"]:focus {
   font-weight: 600;
   font-family: var(--font-body);
   cursor: pointer;
-  transition: background var(--duration-fast) var(--ease), transform var(--duration-fast) var(--ease);
+  text-decoration: none;
+  line-height: 1.2;
+  transition: background var(--duration-fast) var(--ease), transform var(--duration-fast) var(--ease), border-color var(--duration-fast) var(--ease);
 }
 .btn-primary {
   background: var(--accent);
@@ -407,8 +427,7 @@ input[type="url"]:focus {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: var(--space-5, 18px) var(--space-4);
-  padding: 18px;
+  padding: var(--space-5) var(--space-4);
   box-shadow: var(--shadow-sm);
 }
 .card h3 {
@@ -434,8 +453,7 @@ input[type="url"]:focus {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  margin-bottom: var(--space-5, 20px);
-  margin-bottom: 20px;
+  margin-bottom: var(--space-5);
   padding-bottom: var(--space-4);
   border-bottom: 1px solid var(--border);
 }
@@ -607,8 +625,7 @@ input[type="url"]:focus {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: var(--space-5, 18px);
-  padding: 18px 18px 20px;
+  padding: var(--space-5) var(--space-5) var(--space-5);
   box-shadow: var(--shadow-md);
   overflow: hidden;
 }
@@ -1376,10 +1393,6 @@ input[type="url"]:focus {
   color: var(--ink);
   border: 1px solid var(--border);
   padding: 8px 16px;
-  border-radius: var(--radius-md);
-  font-size: var(--text-sm);
-  font-weight: 600;
-  cursor: pointer;
 }
 .btn-secondary:hover {
   background: var(--border);
@@ -1477,8 +1490,7 @@ tr:hover {
 }
 
 .about-card h3 {
-  margin-top: var(--space-5, 20px);
-  margin-top: 20px;
+  margin-top: var(--space-5);
   border-bottom: none;
   padding-bottom: 0;
 }
@@ -1636,6 +1648,7 @@ tr:hover {
   font-size: var(--text-sm);
   flex-shrink: 0;
   width: 100%;
+  border-top: 1px solid rgba(148, 163, 184, 0.15);
 }
 .footer .muted {
   color: #64748b;
@@ -1667,6 +1680,22 @@ tr:hover {
   }
 }
 
+@media (max-width: 720px) {
+  .tabs-nav::after {
+    right: var(--space-4);
+    width: 40px;
+    opacity: 1;
+  }
+  .tabs-track {
+    width: 100%;
+    padding-right: 28px;
+  }
+  .tab {
+    padding: 9px 12px;
+    font-size: 13px;
+  }
+}
+
 @media (max-width: 640px) {
   .header {
     padding: var(--space-6) 0 var(--space-4);
@@ -1674,14 +1703,20 @@ tr:hover {
   .header-inner {
     align-items: flex-start;
   }
+  .brand-title {
+    font-size: clamp(1.55rem, 7vw, 2rem);
+  }
+  .subtitle {
+    max-width: none;
+  }
   .surface-panel {
-    padding: 16px;
+    padding: var(--space-4);
   }
   .card {
     padding: 14px;
   }
   .consenso-card {
-    padding: 16px;
+    padding: var(--space-4);
   }
   .grid-resultados {
     grid-template-columns: 1fr;
@@ -1698,8 +1733,11 @@ tr:hover {
   th, td {
     padding: 6px 8px;
   }
-  .tabs-nav::after {
-    width: 48px;
+  .footer {
+    padding: var(--space-5) 0;
+  }
+  .footer-credits {
+    line-height: 1.6;
   }
 }
 
