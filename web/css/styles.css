@@ -75,17 +75,21 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow-x: hidden;
 }
 
 .container {
+  width: 100%;
   max-width: 1120px;
   margin: 0 auto;
   padding: 0 var(--space-4);
+  box-sizing: border-box;
 }
 
 main.container {
   flex: 1 0 auto;
   width: 100%;
+  min-width: 0;
 }
 
 /* ---------- Header ---------- */
@@ -136,17 +140,39 @@ main.container {
 .tabs-nav {
   padding-top: var(--space-4);
   margin-bottom: var(--space-2);
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 .tabs-track {
   display: flex;
   gap: 2px;
   overflow-x: auto;
   padding: 3px;
+  padding-right: 28px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
   scrollbar-width: thin;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.tabs-nav::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  top: var(--space-4);
+  right: 0;
+  bottom: 0;
+  width: 36px;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  background: linear-gradient(90deg, transparent, var(--bg, #eef1f4) 70%);
 }
 .tab {
   background: transparent;
@@ -159,6 +185,8 @@ main.container {
   color: var(--muted);
   border-radius: var(--radius-sm);
   white-space: nowrap;
+  scroll-snap-align: start;
+  flex: 0 0 auto;
   transition: background var(--duration-fast) var(--ease), color var(--duration-fast) var(--ease);
 }
 .tab:hover {
@@ -371,7 +399,7 @@ input[type="url"]:focus {
 }
 .grid-resultados {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
   gap: var(--space-4);
   margin-top: var(--space-4);
 }
@@ -427,7 +455,7 @@ input[type="url"]:focus {
 }
 .consenso-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
   gap: var(--space-3);
 }
 .consenso-item {
@@ -455,6 +483,9 @@ input[type="url"]:focus {
   font-size: var(--text-xs);
   color: var(--muted);
   font-family: var(--font-mono);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .resultado-principal {
   display: flex;
@@ -477,7 +508,14 @@ input[type="url"]:focus {
 }
 .barra {
   flex: 1;
-  min-width: 120px;
+  min-width: min(120px, 100%);
+  max-width: 100%;
+}
+.barra svg {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: 12px;
 }
 .subtitulo {
   font-size: var(--text-xs);
@@ -490,11 +528,29 @@ input[type="url"]:focus {
 }
 .dist {
   margin-bottom: var(--space-2);
+  max-width: 100%;
+  overflow-x: auto;
+}
+.dist svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+.donut {
+  max-width: 100%;
+}
+.donut svg {
+  display: block;
+  max-width: 160px;
+  height: auto;
+  margin: 0 auto;
 }
 .signals small {
   color: var(--muted);
   font-size: var(--text-xs);
   font-family: var(--font-mono);
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 /* Panel URL */
@@ -1375,7 +1431,7 @@ tr:hover {
 
 .matrices-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
   gap: var(--space-4);
   margin-top: var(--space-4);
 }
@@ -1541,7 +1597,7 @@ tr:hover {
 }
 .cv-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
   gap: var(--space-4);
   margin-top: var(--space-3);
 }
@@ -1601,6 +1657,16 @@ tr:hover {
   font-family: var(--font-mono);
 }
 
+@media (max-width: 900px) {
+  .url-input-row {
+    flex-direction: column;
+  }
+  .grid-resultados,
+  .matrices-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 640px) {
   .header {
     padding: var(--space-6) 0 var(--space-4);
@@ -1608,14 +1674,32 @@ tr:hover {
   .header-inner {
     align-items: flex-start;
   }
+  .surface-panel {
+    padding: 16px;
+  }
+  .card {
+    padding: 14px;
+  }
+  .consenso-card {
+    padding: 16px;
+  }
   .grid-resultados {
     grid-template-columns: 1fr;
   }
-  .url-input-row {
-    flex-direction: column;
-  }
   .consenso-hero-valor {
     font-size: var(--text-2xl);
+  }
+  .tabla-wrap {
+    margin: 0 -4px;
+  }
+  table {
+    font-size: 12px;
+  }
+  th, td {
+    padding: 6px 8px;
+  }
+  .tabs-nav::after {
+    width: 48px;
   }
 }
 

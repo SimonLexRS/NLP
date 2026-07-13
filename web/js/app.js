@@ -395,6 +395,15 @@ function categoriaConsenso(rNB, rLogReg, rTrans) {
 
 function el(id) {
   const panelActivo = document.querySelector(".tab-panel.active") || document;
+  if (panelActivo.id === "panel-url") {
+    const urlId = id === "resultados" ? "url-analisis-resultados" : `url-${id}`;
+    return (
+      panelActivo.querySelector("#" + urlId) ||
+      document.getElementById(urlId) ||
+      panelActivo.querySelector("#" + id) ||
+      document.getElementById(id)
+    );
+  }
   return panelActivo.querySelector("#" + id) || document.getElementById(id);
 }
 
@@ -677,7 +686,10 @@ function mostrarHintTruncado() {
   const panel = document.querySelector(".tab-panel.active") || document;
   let hint = panel.querySelector(".hint-truncado-electra");
   if (!hint) {
-    const vivo = panel.querySelector("#analisis-vivo") || panel.querySelector(".analisis-vivo");
+    const vivo =
+      panel.querySelector("#analisis-vivo") ||
+      panel.querySelector("#url-analisis-vivo") ||
+      panel.querySelector(".analisis-vivo");
     if (!vivo) return;
     hint = document.createElement("p");
     hint.className = "hint-truncado-electra";

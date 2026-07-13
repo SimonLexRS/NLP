@@ -33,7 +33,7 @@ export function dibujarBarras(container, datos, colorMap = {}) {
   const gap = 6;
   const alto = entradas.length * (altoBarra + gap) + 10;
 
-  let svg = `<svg width="${ancho}" height="${alto}" xmlns="http://www.w3.org/2000/svg">`;
+  let svg = `<svg width="100%" height="${alto}" viewBox="0 0 ${ancho} ${alto}" preserveAspectRatio="xMinYMid meet" xmlns="http://www.w3.org/2000/svg">`;
   entradas.forEach(([label, valor], i) => {
     const y = i * (altoBarra + gap) + 5;
     const w = (valor / max) * (ancho - 120);
@@ -69,7 +69,7 @@ export function dibujarDonut(container, datos, colorMap = {}, centroLabel = "") 
   const cx = size / 2;
   const cy = size / 2;
 
-  let svg = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">`;
+  let svg = `<svg width="100%" height="auto" viewBox="0 0 ${size} ${size}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="max-width:${size}px">`;
   let anguloInicio = -Math.PI / 2; // empezar arriba
 
   entradas.forEach(([label, valor]) => {
@@ -117,7 +117,7 @@ export function dibujarBarraConfianza(container, valor, color = "#3b82f6") {
   const ancho = 200;
   const alto = 12;
   const w = valor * (ancho - 2);
-  const svg = `<svg width="${ancho}" height="${alto}" xmlns="http://www.w3.org/2000/svg">
+  const svg = `<svg width="100%" height="${alto}" viewBox="0 0 ${ancho} ${alto}" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
     <rect x="1" y="1" width="${ancho - 2}" height="${alto - 2}" fill="#e5e7eb" rx="5"/>
     <rect x="1" y="1" width="${Math.max(w, 1)}" height="${alto - 2}" fill="${color}" rx="5"/>
     <text x="${ancho / 2}" y="${alto - 2}" text-anchor="middle" font-size="9" fill="white" font-family="sans-serif" font-weight="bold">${pct}%</text>
