@@ -1,6 +1,9 @@
 // pipeline_viz.js — Workflow visual del pipeline de análisis.
 // Desktop: rail horizontal (DAG). Móvil: timeline vertical.
 // Estados: pending | running | done | error | skipped
+// Learn mode: educational explainers (English) via pipeline_edu.js
+
+import * as edu from "./pipeline_edu.js";
 
 const ICONS = {
   input: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>`,
@@ -9,7 +12,6 @@ const ICONS = {
   nb: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M4 19V5M4 19h16"/><path d="M8 16v-5M12 16V8M16 16v-3"/></svg>`,
   logreg: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M4 19V5M4 19h16"/><path d="M7 15c3-8 7-10 13-10"/></svg>`,
   transformer: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/></svg>`,
-  lda: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><circle cx="7" cy="7" r="1.5" fill="currentColor" stroke="none"/></svg>`,
   sensationalism: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14"/></svg>`,
   sentiment: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg>`,
   consenso: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4 12 14.01l-3-3"/></svg>`,
@@ -22,22 +24,27 @@ const ETAPAS = [
   { id: "nb", label: "Naive Bayes", sub: "Clásico", iniciaGrupo: true },
   { id: "logreg", label: "LogReg", sub: "Clásico" },
   { id: "transformer", label: "ELECTRA", sub: "Transformer ONNX", cierraGrupo: true, flechaDespues: true },
-  { id: "lda", label: "LDA", sub: "Temas", flechaDespues: true },
   { id: "sensationalism", label: "Tono", sub: "Sensacionalismo", flechaDespues: true },
   { id: "sentiment", label: "Sentimiento", sub: "RoBERTuito + léxico", flechaDespues: true },
   { id: "consenso", label: "Consenso", sub: "Veredicto NLP" },
 ];
 
 let containerRef = null;
+let learnMode = true;
+let focusedStage = null;
 
 function $pv(suffix) {
   if (!containerRef) return null;
   return containerRef.querySelector(`[data-pv="${suffix}"]`);
 }
 
+function teachSlot() {
+  return containerRef ? containerRef.querySelector('[data-pv="teach-slot"]') : null;
+}
+
 function nodoHTML(etapa) {
   return `
-    <div class="pipeline-nodo" data-pv="nodo-${etapa.id}" data-stage="${etapa.id}">
+    <div class="pipeline-nodo" data-pv="nodo-${etapa.id}" data-stage="${etapa.id}" role="button" tabindex="0" title="Clic para aprender">
       <div class="pipeline-nodo-icono" aria-hidden="true">${ICONS[etapa.id] || ICONS.input}</div>
       <div class="pipeline-nodo-contenido">
         <div class="pipeline-nodo-titulo">${etapa.label}</div>
@@ -54,10 +61,106 @@ function nodoHTML(etapa) {
     </div>`;
 }
 
-function conectorHTML(activo = false) {
-  return `<div class="pipeline-conector${activo ? " activo" : ""}" aria-hidden="true">
+function conectorHTML() {
+  return `<div class="pipeline-conector" aria-hidden="true">
     <span class="pipeline-conector-line"></span>
   </div>`;
+}
+
+function bindNodeClicks() {
+  if (!containerRef) return;
+  containerRef.querySelectorAll(".pipeline-nodo").forEach((nodo) => {
+    const id = nodo.getAttribute("data-stage");
+    const open = () => focusStage(id, true);
+    nodo.addEventListener("click", open);
+    nodo.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        open();
+      }
+    });
+  });
+}
+
+function bindLearnToggle() {
+  const btn = $pv("learn-toggle");
+  if (!btn) return;
+  const syncLabel = () => {
+    const ui = edu.uiStrings();
+    btn.setAttribute("aria-pressed", learnMode ? "true" : "false");
+    btn.classList.toggle("activo", learnMode);
+    btn.textContent = learnMode ? ui.learnOn : ui.learnOff;
+  };
+  syncLabel();
+  btn.onclick = () => {
+    learnMode = !learnMode;
+    syncLabel();
+    containerRef.classList.toggle("learn-on", learnMode);
+    if (!learnMode) {
+      edu.hideTeachPanel(teachSlot());
+      clearFocusHighlight();
+    } else if (focusedStage) {
+      focusStage(focusedStage, true);
+    }
+  };
+}
+
+function bindLangToggle() {
+  const group = $pv("lang-toggle");
+  if (!group) return;
+  const current = edu.getLang();
+  group.querySelectorAll("[data-lang]").forEach((btn) => {
+    const on = btn.getAttribute("data-lang") === current;
+    btn.classList.toggle("activo", on);
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+    btn.onclick = () => {
+      const next = btn.getAttribute("data-lang");
+      edu.setLang(next);
+      group.querySelectorAll("[data-lang]").forEach((b) => {
+        const active = b.getAttribute("data-lang") === next;
+        b.classList.toggle("activo", active);
+        b.setAttribute("aria-pressed", active ? "true" : "false");
+      });
+      bindLearnToggle();
+      if (learnMode && focusedStage) {
+        focusStage(focusedStage, false);
+      }
+    };
+  });
+}
+
+function clearFocusHighlight() {
+  if (!containerRef) return;
+  containerRef.querySelectorAll(".pipeline-nodo.focus-edu").forEach((n) => {
+    n.classList.remove("focus-edu");
+  });
+}
+
+/**
+ * Focus a stage for education. force=true opens even if learn was toggled mid-way via click.
+ */
+export function focusStage(id, fromUser = false) {
+  focusedStage = id;
+  if (!learnMode && !fromUser) return;
+  if (!learnMode && fromUser) {
+    learnMode = true;
+    bindLearnToggle();
+    if (containerRef) containerRef.classList.add("learn-on");
+  }
+  clearFocusHighlight();
+  const nodo = $pv(`nodo-${id}`);
+  if (nodo) nodo.classList.add("focus-edu");
+  const slot = teachSlot();
+  if (slot) edu.renderTeachPanel(slot, id);
+}
+
+export function setLiveData(id, data) {
+  edu.setLiveData(id, data);
+  edu.refreshTeachIf(id);
+}
+
+export function isLearnMode() {
+  return learnMode;
 }
 
 /**
@@ -66,7 +169,9 @@ function conectorHTML(activo = false) {
 export function render(container) {
   if (!container) return;
   containerRef = container;
-  container.className = "pipeline-viz-container";
+  container.className = "pipeline-viz-container" + (learnMode ? " learn-on" : "");
+  focusedStage = null;
+  edu.clearLiveData();
 
   let html = "";
   for (const etapa of ETAPAS) {
@@ -89,14 +194,33 @@ export function render(container) {
 
   container.innerHTML = `
     <div class="pipeline-viz-header">
-      <h3 class="pipeline-viz-titulo">Pipeline NLP</h3>
-      <p class="pipeline-viz-hint">Categoría · tono · sentimiento · tema</p>
+      <div class="pipeline-viz-header-text">
+        <h3 class="pipeline-viz-titulo">Pipeline NLP</h3>
+        <p class="pipeline-viz-hint">Categoría · tono · sentimiento</p>
+      </div>
+      <div class="pipeline-viz-controls">
+        <div class="pipeline-lang-toggle" data-pv="lang-toggle" role="group" aria-label="Idioma del explicador">
+          <button type="button" class="pipeline-lang-btn" data-lang="es" aria-pressed="true">ES</button>
+          <button type="button" class="pipeline-lang-btn" data-lang="en" aria-pressed="false">EN</button>
+        </div>
+        <button type="button" class="pipeline-learn-toggle activo" data-pv="learn-toggle" aria-pressed="true">
+          Modo aprender ON
+        </button>
+      </div>
     </div>
-    <div class="pipeline-viz-nodos">${html}</div>`;
+    <div class="pipeline-viz-nodos">${html}</div>
+    <div class="pipeline-teach-slot" data-pv="teach-slot" hidden></div>`;
+
+  bindLearnToggle();
+  bindLangToggle();
+  bindNodeClicks();
 }
 
 export function reset() {
   if (!containerRef) return;
+  focusedStage = null;
+  edu.clearLiveData();
+  edu.hideTeachPanel(teachSlot());
   for (const nodo of containerRef.querySelectorAll(".pipeline-nodo")) {
     nodo.className = "pipeline-nodo";
   }
@@ -112,7 +236,6 @@ export function reset() {
   for (const c of containerRef.querySelectorAll(".pipeline-conector")) {
     c.classList.remove("activo", "done");
   }
-  // Restaurar subtítulos originales
   for (const etapa of ETAPAS) {
     const sub = $pv(`sub-${etapa.id}`);
     if (sub) sub.textContent = etapa.sub;
@@ -126,7 +249,6 @@ function marcarConectorPrev(id) {
   if (prev && prev.classList.contains("pipeline-conector")) {
     prev.classList.add("activo");
   }
-  // Si está dentro del grupo, activar conector antes del grupo
   const grupoWrap = nodo.closest(".pipeline-grupo-wrap");
   if (grupoWrap) {
     const before = grupoWrap.previousElementSibling;
@@ -161,12 +283,10 @@ export async function iniciarEtapa(id) {
   const spinner = $pv(`spinner-${id}`);
   if (spinner) spinner.className = "pipeline-nodo-status activo";
   marcarConectorPrev(id);
+  if (learnMode) focusStage(id, false);
   await sleep(220);
 }
 
-/**
- * Actualiza barra de progreso en un nodo (carga de modelos ONNX).
- */
 export function actualizarProgreso(id, pct, file) {
   const wrap = $pv(`progress-${id}`);
   const bar = $pv(`bar-${id}`);
@@ -190,6 +310,7 @@ export async function completarEtapa(id, resultado) {
   const progress = $pv(`progress-${id}`);
   if (progress) progress.hidden = true;
   nodo.className = "pipeline-nodo done";
+  if (focusedStage === id) nodo.classList.add("focus-edu");
   completarConectorPrev(id);
   const res = $pv(`resultado-${id}`);
   if (res && resultado) {

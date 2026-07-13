@@ -1,16 +1,16 @@
 // app.js — Lógica principal de la interfaz del Clasificador de Noticias.
-// Orquesta: preprocess → vectorize → NB → LogReg → transformer → LDA → tono → sentimiento → consenso.
+// Orquesta: preprocess → vectorize → NB → LogReg → transformer → tono → sentimiento → consenso.
 
 import * as preprocess from "./preprocess.js";
 import * as vectorize from "./vectorize.js";
 import * as nb from "./naive_bayes.js";
 import * as logreg from "./logreg.js";
-import * as lda from "./lda.js";
 import * as sensationalism from "./sensationalism.js";
 import * as sentimentLex from "./sentiment_lexicon.js";
 import * as transformer from "./transformer.js";
 import { extraerNoticiaDeURL, validarEsNoticia } from "./url_extractor.js";
 import * as pv from "./pipeline_viz.js";
+import { ensureNotebookLoaded } from "./notebook_viewer.js";
 import {
   dibujarBarras,
   dibujarDonut,
@@ -20,7 +20,7 @@ import {
 } from "./charts.js";
 
 let inicializado = false;
-let modelosCargados = { nb: false, logreg: false, lda: false, lexico: false, reglas: false };
+let modelosCargados = { nb: false, logreg: false, lexico: false, reglas: false };
 let transformerListo = { categoria: false, sentimiento: false };
 let ejemplosNoticias = [];
 let precargaIniciada = false;
@@ -30,10 +30,9 @@ async function inicializar() {
   mostrarEstado("Cargando modelos clásicos...", "info");
 
   try {
-    const [nbData, logregData, ldaData, stopw, lexic, reglas, ejemplos] = await Promise.all([
+    const [nbData, logregData, stopw, lexic, reglas, ejemplos] = await Promise.all([
       nb.cargarNB(),
       logreg.cargarLogReg(),
-      lda.cargarLDA(),
       preprocess.cargarStopwords(),
       sentimentLex.cargarLexico(),
       sensationalism.cargarReglas(),
@@ -44,7 +43,7 @@ async function inicializar() {
     vectorize.setVocab(vi.vocabulary, vi.idf, vi.ngram_range);
     preprocess.construirLemmaMap(vi.vocabulary);
 
-    modelosCargados = { nb: true, logreg: true, lda: true, lexico: true, reglas: true };
+    modelosCargados = { nb: true, logreg: true, lexico: true, reglas: true };
     inicializado = true;
     ejemplosNoticias = ejemplos;
     mostrarBotonesEjemplos();
@@ -211,27 +210,41 @@ async function ejecutarAnalisis(texto) {
     pv.render(pvContainer);
     pvContainer.style.display = "block";
     pv.reset();
-    await pv.completarEtapa("input", `${texto.split(/\s+/).length} palabras`);
+    const nWords = texto.split(/\s+/).filter(Boolean).length;
+    pv.setLiveData("input", { words: nWords, chars: texto.length });
+    await pv.completarEtapa("input", `${nWords} palabras`);
+    if (pv.isLearnMode()) pv.focusStage("input");
   }
 
   let rTrans = null;
 
   try {
     await pv.iniciarEtapa("preprocess");
-    const textoPrep = preprocess.preprocesoTexto(texto);
-    const nTokens = textoPrep.split(/\s+/).filter(Boolean).length;
+    const tokens = preprocess.preproceso(texto);
+    const textoPrep = tokens.join(" ");
+    const nTokens = tokens.length;
+    pv.setLiveData("preprocess", {
+      nTokens,
+      sample: tokens.slice(0, 12),
+    });
     await pv.completarEtapa("preprocess", `${nTokens} tokens`);
 
     await pv.iniciarEtapa("vectorize");
     const vector = vectorize.vectorizar(textoPrep);
+    pv.setLiveData("vectorize", {
+      nTerms: vector.size,
+      topTerms: topTfIdfTerms(vector, 6),
+    });
     await pv.completarEtapa("vectorize", `${vector.size} términos`);
 
     await pv.iniciarEtapa("nb");
     const rNB = nb.predecir(vector);
+    pv.setLiveData("nb", { label: rNB.label, confidence: rNB.confidence });
     await pv.completarEtapa("nb", `${rNB.label} (${(rNB.confidence * 100).toFixed(0)}%)`);
 
     await pv.iniciarEtapa("logreg");
     const rLogReg = logreg.predecir(vector);
+    pv.setLiveData("logreg", { label: rLogReg.label, confidence: rLogReg.confidence });
     await pv.completarEtapa("logreg", `${rLogReg.label} (${(rLogReg.confidence * 100).toFixed(0)}%)`);
 
     // Transformer con fallback (no bloquea el resto del pipeline).
@@ -249,6 +262,11 @@ async function ejecutarAnalisis(texto) {
       const badgeTrans = `${rTrans.label} (${(rTrans.confidence * 100).toFixed(0)}%)${
         rTrans.truncado ? " · trunc." : ""
       }`;
+      pv.setLiveData("transformer", {
+        label: rTrans.label,
+        confidence: rTrans.confidence,
+        truncado: !!rTrans.truncado,
+      });
       await pv.completarEtapa("transformer", badgeTrans);
       if (rTrans.truncado) {
         mostrarHintTruncado();
@@ -256,17 +274,20 @@ async function ejecutarAnalisis(texto) {
     } catch (e) {
       console.warn("Transformer categoría falló:", e);
       const corto = transformer.mensajeErrorCorto(e);
+      pv.setLiveData("transformer", { error: corto, truncado: false });
       pv.errorEtapa("transformer", corto);
       rTrans = null;
       mostrarEstado(`ELECTRA no disponible (${corto}); se continúa con NB y LogReg.`, "warn");
     }
 
-    await pv.iniciarEtapa("lda");
-    const rLDA = lda.predecirTema(textoPrep);
-    await pv.completarEtapa("lda", `Tema ${rLDA.topicId + 1}`);
-
     await pv.iniciarEtapa("sensationalism");
     const rSens = sensationalism.analizar(texto);
+    const sig = rSens.signals || {};
+    pv.setLiveData("sensationalism", {
+      label: rSens.label,
+      score: rSens.score,
+      signals: `clickbait×${(sig.clickbait_hits || []).length}, CAPS ${((sig.prop_mayusculas || 0) * 100).toFixed(0)}%, !×${sig.n_exclamaciones || 0}`,
+    });
     await pv.completarEtapa("sensationalism", `${rSens.label} (${(rSens.score * 100).toFixed(0)}%)`);
 
     await pv.iniciarEtapa("sentiment");
@@ -286,13 +307,19 @@ async function ejecutarAnalisis(texto) {
       console.warn("Sentimiento ONNX falló, usando léxico:", e);
     }
     const sentFinal = rSentONNX || rSentLex;
+    pv.setLiveData("sentiment", {
+      label: sentFinal.label,
+      source: rSentONNX ? "RoBERTuito ONNX" : "lexicon",
+      lexLabel: rSentLex.label,
+      onnxLabel: rSentONNX ? rSentONNX.label : null,
+    });
     if (rSentONNX) {
       await pv.completarEtapa("sentiment", `${sentFinal.label}`);
     } else {
       pv.omitirEtapa("sentiment", `Léxico: ${sentFinal.label}`);
     }
 
-    renderResultadosClasicos(texto, rNB, rLogReg, rLDA, rSens, rSentLex);
+    renderResultadosClasicos(texto, rNB, rLogReg, rSens, rSentLex);
     if (rTrans) {
       renderResultadosTransformer(rTrans, rSentONNX);
     } else if (rSentONNX) {
@@ -306,7 +333,15 @@ async function ejecutarAnalisis(texto) {
 
     await pv.iniciarEtapa("consenso");
     const catConsenso = categoriaConsenso(rNB, rLogReg, rTrans);
-    renderConsenso(rNB, rLogReg, rTrans, rSens, sentFinal, rLDA, catConsenso);
+    const voteParts = [`NB=${rNB.label}`, `LR=${rLogReg.label}`];
+    if (rTrans) voteParts.push(`ELECTRA=${rTrans.label}`);
+    pv.setLiveData("consenso", {
+      consensus: catConsenso,
+      votes: voteParts.join(" · "),
+      tone: rSens.label,
+      sentiment: sentFinal.label,
+    });
+    renderConsenso(rNB, rLogReg, rTrans, rSens, sentFinal, catConsenso);
     await pv.completarEtapa("consenso", catConsenso);
 
     if (detalle) detalle.style.display = "block";
@@ -317,6 +352,20 @@ async function ejecutarAnalisis(texto) {
   } finally {
     setAnalizando(false);
   }
+}
+
+/** Top TF-IDF terms for the Learn-mode live snapshot. */
+function topTfIdfTerms(vector, n = 6) {
+  const info = nb.getVocabInfo();
+  if (!info?.vocabulary || !vector?.size) return [];
+  const inv = {};
+  for (const [term, idx] of Object.entries(info.vocabulary)) {
+    inv[idx] = term;
+  }
+  return [...vector.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, n)
+    .map(([idx, w]) => `${inv[idx] || `#${idx}`} (${w.toFixed(2)})`);
 }
 
 function categoriaConsenso(rNB, rLogReg, rTrans) {
@@ -342,7 +391,7 @@ function el(id) {
   return panelActivo.querySelector("#" + id) || document.getElementById(id);
 }
 
-function renderResultadosClasicos(texto, rNB, rLogReg, rLDA, rSens, rSentLex) {
+function renderResultadosClasicos(texto, rNB, rLogReg, rSens, rSentLex) {
   const res = el("resultados");
   if (res) res.style.display = "block";
   const detalle = el("resultados-detalle");
@@ -384,9 +433,6 @@ function renderResultadosClasicos(texto, rNB, rLogReg, rLDA, rSens, rSentLex) {
     COLORES_SENTIMIENTO,
     rSentLex.label
   );
-
-  el("tema-id").textContent = `Tema ${rLDA.topicId + 1}`;
-  el("tema-palabras").textContent = rLDA.topWords.map(([w]) => w).join(", ");
 }
 
 function renderResultadosTransformer(rTrans, rSentONNX) {
@@ -413,7 +459,7 @@ function renderResultadosTransformer(rTrans, rSentONNX) {
   }
 }
 
-function renderConsenso(rNB, rLogReg, rTrans, rSens, rSent, rLDA, consenso) {
+function renderConsenso(rNB, rLogReg, rTrans, rSens, rSent, consenso) {
   const trLabel = rTrans ? rTrans.label : "—";
   const cons = el("consenso");
   cons.innerHTML = `
@@ -434,12 +480,9 @@ function renderConsenso(rNB, rLogReg, rTrans, rSens, rSent, rLDA, consenso) {
         <span class="consenso-label">Sentimiento</span>
         <span class="consenso-valor" style="color:${COLORES_SENTIMIENTO[rSent.label]}">${rSent.label}</span>
       </div>
-      <div class="consenso-item">
-        <span class="consenso-label">Tema LDA</span>
-        <span class="consenso-valor">Tema ${rLDA.topicId + 1}</span>
-      </div>
     </div>`;
-  el("consenso-section").style.display = "block";
+  const sec = el("consenso-section");
+  if (sec) sec.style.display = "block";
 }
 
 async function analizarCSV(file) {
@@ -470,13 +513,11 @@ async function analizarCSV(file) {
     const rNB = nb.predecir(vec);
     const rSens = sensationalism.analizar(t);
     const rSent = sentimentLex.analizar(t);
-    const rLDA = lda.predecirTema(prep);
     return {
       texto: t,
       categoria: rNB.label,
       tono: rSens.label,
       sentimiento: rSent.label,
-      tema: rLDA.topicId,
     };
   });
 
@@ -520,7 +561,7 @@ function renderResumenLote(resultados) {
   const tabla = document.getElementById("lote-tabla");
   tabla.innerHTML = `
     <table>
-      <thead><tr><th>#</th><th>Texto</th><th>Categoría</th><th>Tono</th><th>Sent.</th><th>Tema</th></tr></thead>
+      <thead><tr><th>#</th><th>Texto</th><th>Categoría</th><th>Tono</th><th>Sent.</th></tr></thead>
       <tbody>
         ${resultados
           .slice(0, 20)
@@ -532,7 +573,6 @@ function renderResumenLote(resultados) {
             <td style="color:${COLORES_CATEGORIA[r.categoria]}">${r.categoria}</td>
             <td style="color:${r.tono === "sensacionalista" ? "#be123c" : "#0f766e"}">${r.tono}</td>
             <td style="color:${COLORES_SENTIMIENTO[r.sentimiento]}">${r.sentimiento}</td>
-            <td>${r.tema + 1}</td>
           </tr>`
           )
           .join("")}
@@ -683,6 +723,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
       tab.classList.add("active");
       document.getElementById(tab.dataset.target).classList.add("active");
+      if (tab.dataset.target === "panel-notebook") {
+        ensureNotebookLoaded();
+      }
     });
   });
 
