@@ -1,0 +1,30 @@
+# Dependencias Python para entrenamiento y exportacion (NO se despliegan).
+# El sitio web es 100% estatico (JS + ONNX) y no necesita estas dependencias.
+
+# Preprocesamiento (Semana 1)
+nltk>=3.8
+spacy>=3.7
+unidecode>=1.3
+
+# Vectorizacion + modelos clasicos (Semana 2-3)
+scikit-learn>=1.3
+numpy>=1.24
+joblib>=1.3
+
+# LDA / embeddings (Semana 3)
+gensim>=4.3
+
+# Transformer (Semana 4) - fine-tuning
+torch>=2.0
+transformers>=4.40
+
+# Exportacion a ONNX (para transformers.js)
+optimum[onnxruntime]>=1.20
+onnxruntime>=1.17
+
+# Evaluacion / visualizacion
+matplotlib>=3.7
+pandas>=2.0
+
+# Utilidades
+tqdm>=4.65

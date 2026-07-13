@@ -1,0 +1,55 @@
+{
+  "clickbait_patterns": [
+    "no creeras",
+    "no te creeras",
+    "escandalo",
+    "te sorprendera",
+    "te sorprendera saber",
+    "exclusivo",
+    "impactante",
+    "nadie esperaba",
+    "secreto mejor guardado",
+    "urgente",
+    "increible",
+    "no vas a creer",
+    "lo que nadie te dijo",
+    "la verdad oculta",
+    "filtran",
+    "explota",
+    "bomba"
+  ],
+  "palabras_emocionales": [
+    "conmocionado",
+    "escandalizado",
+    "estremecedor",
+    "impactante",
+    "increible",
+    "bomba",
+    "escandalo",
+    "catastrofico",
+    "historico",
+    "sin precedentes",
+    "explosivo",
+    "alarmante",
+    "devastador",
+    "monumental",
+    "escalofriante",
+    "viralo",
+    "viral"
+  ],
+  "umbral": 0.5,
+  "pesos": {
+    "clickbait": 0.35,
+    "emocional": 0.15,
+    "exclamacion": 0.1,
+    "mayusculas": 1.5,
+    "interrogacion": 0.05
+  },
+  "caps": {
+    "clickbait": 0.6,
+    "emocional": 0.4,
+    "exclamacion": 0.3,
+    "mayusculas": 0.3,
+    "interrogacion": 0.15
+  }
+}

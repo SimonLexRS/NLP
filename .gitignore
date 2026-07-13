@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg
+.venv/
+venv/
+env/
+
+# Entornos
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Artefactos de modelos (regenerables con `make train export`)
+backend/models/*.pkl
+backend/models/transformer/
+backend/models/transformer_onnx/
+backend/models/transformer_onnx_q8/
+backend/models/transformer_history.json
+
+# NOTA: metrics.json, confusion_*.png, *.json en web/assets/ SI se commitean
+# (son necesarios para el sitio estatico). El modelo ONNX tambien se commitea.
+
+# Rust/Node (no usados, pero por si se anaden)
+node_modules/
+target/
+Cargo.lock
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ZCode
+.zcode/

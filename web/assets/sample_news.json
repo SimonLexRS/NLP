@@ -1,0 +1,100 @@
+[
+  {
+    "texto": "El comite de partido rechazo la propuesta legislativa presentada por la bancada opositora. La decision esta vinculada al ambito de consulta popular. Tambien se considera el impacto sobre senado. La situacion sigue su curso habitual mientras se aguardan definiciones mas claras. Se temen efectos adversos en los proximos meses segun advirtieron los especialistas. Segun el reporte oficial, los datos alcanzan el 30 por ciento.",
+    "categoria": "politica",
+    "tono": "informativo",
+    "sentimiento": "negativo",
+    "id": 20
+  },
+  {
+    "texto": "Nadie esperaba esto:, la bancada oficialista ratifico el compromiso con la democracia y el estado de derecho En un hecho alarmante, la medida guarda relacion con elecciones generales. El tema de votacion tambien esta en el centro del debate. Representantes de distintos sectores participaron activamente en la jornada de trabajo. Se temen efectos adversos en los proximos meses segun advirtieron los especialistas. Hasta el momento no ha habido comentarios adicionales por parte de los involucrados.",
+    "categoria": "politica",
+    "tono": "sensacionalista",
+    "sentimiento": "negativo",
+    "id": 15
+  },
+  {
+    "texto": "La bolsa comercial proyecto una recuperacion gradual de la economia nacional para el proximo ano. La decision esta vinculada al ambito de bolsa de valores. Tambien se considera el impacto sobre presupuesto fiscal. La inversion en el sector salud genero un crecimiento del producto interno bruto en el ultimo trimestre. El evento conto con la presencia de autoridades y representantes de diversos sectores. Criticos cuestionaron la falta de planificacion en la implementacion de la medida.",
+    "categoria": "economia",
+    "tono": "informativo",
+    "sentimiento": "negativo",
+    "id": 9
+  },
+  {
+    "texto": "URGENTE: alertan que, la camara nacional de industria reporto un superavit en la balanza comercial gracias al aumento de las exportaciones En un hecho historico, la medida guarda relacion con tesoro publico. La proxima semana se llevara a cabo una nueva reunion para evaluar los avances. Los beneficiarios directos expresaron su satisfaccion por la gestion realizada. Se espera una pronta declaracion al respecto por parte de las autoridades competentes.",
+    "categoria": "economia",
+    "tono": "sensacionalista",
+    "sentimiento": "positivo",
+    "id": 74
+  },
+  {
+    "texto": "La liga profesional aseguro su clasificacion al mundial tras vencer al seleccionado visitante. La decision esta vinculada al ambito de bicampeonato. Tambien se considera el impacto sobre medalla de oro. Se aguarda la reaccion de los distintos sectores que podrian verse afectados. La poblacion manifesto su apoyo generalizado a la medida anunciada.",
+    "categoria": "deportes",
+    "tono": "informativo",
+    "sentimiento": "positivo",
+    "id": 3
+  },
+  {
+    "texto": "Nadie esperaba esto:, la seleccion femenina gano el clasico nacional con un marcador amplio ante su eterno rival En un hecho bomba, la medida guarda relacion con bicampeonato. El tema de futbol tambien esta en el centro del debate. Los expertos consultados señalaron que es necesario analizar el impacto a largo plazo. La poblacion manifesto su apoyo generalizado a la medida anunciada.",
+    "categoria": "deportes",
+    "tono": "sensacionalista",
+    "sentimiento": "positivo",
+    "id": 11
+  },
+  {
+    "texto": "La compania de internet presento un sistema de reconocimiento facial con aplicaciones en seguridad. La decision esta vinculada al ambito de aplicacion movil. El encuentro tuvo lugar en las instalaciones principales con cobertura de prensa acreditada. Expertos calificaron el hecho de historicamente positivo para la region. El anuncio se produjo tras una reunion prolongada que se extendio por varias horas.",
+    "categoria": "tecnologia",
+    "tono": "informativo",
+    "sentimiento": "positivo",
+    "id": 4
+  },
+  {
+    "texto": "ESCANDALO total al descubrirse, la compania de telecomunicaciones revelo una vulnerabilidad en sus servidores que fue corregida de inmediato En un hecho increible, la medida guarda relacion con ciberseguridad. La conferencia de prensa se realizo en la sede central durante la manana de ayer. Organizaciones civiles exigieron mayor claridad sobre el alcance de la medida. Los detalles de la medida se daran a conocer en los proximos dias mediante un comunicado oficial.!",
+    "categoria": "tecnologia",
+    "tono": "sensacionalista",
+    "sentimiento": "negativo",
+    "id": 6
+  },
+  {
+    "texto": "Los medicos especialistas detecto una nueva variante del virus que esta circulando en la region. La decision esta vinculada al ambito de pacientes. Tambien se considera el impacto sobre medicos. Pronto se conoceran mas especificaciones tecnicas del proyecto anunciado. La noticia fue recibida con optimismo por los analistas consultados. Segun el cronograma establecido, las acciones comenzaran a ejecutarse de inmediato.",
+    "categoria": "salud",
+    "tono": "informativo",
+    "sentimiento": "positivo",
+    "id": 32
+  },
+  {
+    "texto": "IMPACTANTE: confirman que, el cuerpo medico recomendo la vacunacion anual como medida de prevencion para grupos de riesgo En un hecho escandalizado, la medida guarda relacion con vigilancia epidemiologica. El encuentro tuvo lugar en las instalaciones principales con cobertura de prensa acreditada. La noticia fue recibida con optimismo por los analistas consultados.!",
+    "categoria": "salud",
+    "tono": "sensacionalista",
+    "sentimiento": "positivo",
+    "id": 5
+  },
+  {
+    "texto": "El embajador acreditado reunio a los ministros de exteriores para discutir la agenda regional. La decision esta vinculada al ambito de tratado bilateral. Tambien se considera el impacto sobre diplomacia. La informacion fue confirmada por fuentes oficiales que prefirieron mantener el anonimato. Criticos cuestionaron la falta de planificacion en la implementacion de la medida. La medida entrara en vigencia a partir del proximo mes segun lo establecido en la normativa.",
+    "categoria": "internacional",
+    "tono": "informativo",
+    "sentimiento": "negativo",
+    "id": 16
+  },
+  {
+    "texto": "EXCLUSIVO: filtran que, la cancilleria anuncio un paquete de ayuda internacional para los paises afectados por la crisis En un hecho alarmante, la medida guarda relacion con cumbre diplomatica. El tema de crimen organizado tambien esta en el centro del debate. El consejo de seguridad debatio las sanciones economicas contra el regimen que vulnera los derechos humanos. El evento conto con la presencia de autoridades y representantes de diversos sectores. Los sectores involucrados celebraron la decision y la calificaron de acertada.!",
+    "categoria": "internacional",
+    "tono": "sensacionalista",
+    "sentimiento": "positivo",
+    "id": 17
+  },
+  {
+    "texto": "El museo nacional presento una muestra de artesania tradicional de las regiones del pais. La decision esta vinculada al ambito de gala especial. Tambien se considera el impacto sobre teatro. Se espera una pronta declaracion al respecto por parte de las autoridades competentes. La situacion permanece sin cambios sustanciales segun los observadores. El organismo difundio un comunicado en el que explica los alcances de la medida.",
+    "categoria": "cultura",
+    "tono": "informativo",
+    "sentimiento": "neutro",
+    "id": 0
+  },
+  {
+    "texto": "ESCANDALO total al descubrirse, la revista literaria anuncio una serie de medidas que seran implementadas progresivamente En un hecho catastrofico, la medida guarda relacion con cine. La situacion sigue su curso habitual mientras se aguardan definiciones mas claras. Voces autorizadas advirtieron graves consecuencias si no se corrige el rumbo.!",
+    "categoria": "cultura",
+    "tono": "sensacionalista",
+    "sentimiento": "negativo",
+    "id": 1
+  }
+]
