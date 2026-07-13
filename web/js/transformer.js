@@ -62,12 +62,12 @@ export function truncarParaModelo(texto, maxChars = MAX_CHARS_ONNX) {
   return { texto: corte.trim(), truncado: true };
 }
 
-/** Ruta relativa a la página (compatible con GitHub Pages project sites). */
-function rutaModeloCategoria() {
+/** Base de assets relativa a la página (compatible con GitHub Pages /NLP/). */
+function baseAssetsHref() {
   if (typeof window === "undefined" || !window.location?.href) {
-    return "assets/model_onnx/";
+    return "assets/";
   }
-  return new URL("assets/model_onnx/", window.location.href).href;
+  return new URL("assets/", window.location.href).href;
 }
 
 /**
@@ -81,11 +81,12 @@ export async function cargarClasificadorCategoria(onProgress = null) {
   loadingCategoria = withOnnxLock(async () => {
     if (categoriaClassifier) return categoriaClassifier;
     const prevLocal = env.allowLocalModels;
+    const prevLocalPath = env.localModelPath;
     try {
+      env.localModelPath = baseAssetsHref();
       env.allowLocalModels = true;
-      const modelPath = rutaModeloCategoria();
       categoriaClassifier = await conTimeout(
-        pipeline("text-classification", modelPath, {
+        pipeline("text-classification", "model_onnx", {
           dtype: "q8",
           progress_callback: (data) => {
             if (onProgress && data.status === "progress") {
@@ -103,6 +104,7 @@ export async function cargarClasificadorCategoria(onProgress = null) {
       throw e;
     } finally {
       env.allowLocalModels = prevLocal;
+      env.localModelPath = prevLocalPath;
     }
   });
 
@@ -263,6 +265,7 @@ export function estadoCarga() {
 export function mensajeErrorCorto(err) {
   const msg = (err && err.message) || String(err || "Error");
   if (/timeout/i.test(msg)) return "Timeout";
+  if (/local file missing/i.test(msg)) return "No se encontró el modelo ONNX local";
   if (/network|fetch|failed to fetch/i.test(msg)) return "Red";
   if (/memory|oom|out of memory/i.test(msg)) return "Memoria";
   if (/404|not found/i.test(msg)) return "Modelo no encontrado";
