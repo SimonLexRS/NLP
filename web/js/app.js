@@ -338,16 +338,18 @@ async function ejecutarAnalisis(texto) {
     }
 
     await pv.iniciarEtapa("consenso");
-    const catConsenso = categoriaConsenso(rNB, rLogReg, rTrans);
+    const veredicto = categoriaConsenso(rNB, rLogReg, rTrans);
+    const catConsenso = veredicto.label;
     const voteParts = [`NB=${rNB.label}`, `LR=${rLogReg.label}`];
     if (rTrans) voteParts.push(`ELECTRA=${rTrans.label}`);
     pv.setLiveData("consenso", {
       consensus: catConsenso,
       votes: voteParts.join(" · "),
+      reason: veredicto.reason,
       tone: rSens.label,
       sentiment: sentFinal.label,
     });
-    renderConsenso(rNB, rLogReg, rTrans, rSens, sentFinal, catConsenso);
+    renderConsenso(rNB, rLogReg, rTrans, rSens, sentFinal, veredicto);
     await pv.completarEtapa("consenso", catConsenso);
 
     if (resultados) resultados.style.display = "block";
@@ -375,40 +377,100 @@ function topTfIdfTerms(vector, n = 6) {
     .map(([idx, w]) => `${inv[idx] || `#${idx}`} (${w.toFixed(2)})`);
 }
 
-/** Confianza mínima de ELECTRA para priorizar su label sobre mayoría clásica. */
-const ELECTRA_CONSENSO_MIN_CONF = 0.55;
+/**
+ * Margen entre la clase ganadora y la 2ª (0–1). Mayor = predicción más clara.
+ */
+function margenConfianza(scores, label) {
+  if (!scores || typeof scores !== "object") return 0;
+  const vals = Object.entries(scores)
+    .map(([k, v]) => ({ k, v: Number(v) || 0 }))
+    .sort((a, b) => b.v - a.v);
+  if (!vals.length) return 0;
+  const top = vals[0].k === label ? vals[0].v : Number(scores[label]) || 0;
+  const second = vals.find((x) => x.k !== label)?.v ?? 0;
+  return Math.max(0, Math.min(1, top - second));
+}
 
 /**
- * Veredicto de categoría: si ELECTRA está disponible y confía (>= 0.55),
- * gana su predicción (evita que NB+LR anulen un Transformer correcto).
- * Si no, mayoría; empates → ELECTRA si está presente.
+ * Consenso inteligente de categoría.
+ * Mezcla las distribuciones de probabilidad ponderadas por fiabilidad del modelo,
+ * refuerza el acuerdo NB↔LR y da más peso a ELECTRA cuando es claro y confiable.
+ * Devuelve { label, reason, blend }.
  */
 function categoriaConsenso(rNB, rLogReg, rTrans) {
-  if (rTrans && typeof rTrans.confidence === "number" && rTrans.confidence >= ELECTRA_CONSENSO_MIN_CONF) {
-    return rTrans.label;
+  const modelos = [
+    { id: "NB", pred: rNB, pesoBase: 1.0 },
+    { id: "LR", pred: rLogReg, pesoBase: 0.9 },
+  ];
+  if (rTrans) modelos.push({ id: "ELECTRA", pred: rTrans, pesoBase: 1.85 });
+
+  const blend = {};
+  const aportes = [];
+
+  for (const m of modelos) {
+    const conf = Math.max(0, Math.min(1, Number(m.pred.confidence) || 0));
+    const margin = margenConfianza(m.pred.scores, m.pred.label);
+    let peso = m.pesoBase * (0.55 + 0.45 * conf) * (0.7 + 0.3 * margin);
+
+    // ELECTRA muy seguro: amplificar (cubre NB+LR alineados pero equivocados).
+    if (m.id === "ELECTRA" && conf >= 0.8) peso *= 1.45;
+    // ELECTRA dudoso: atenuar y dejar más voz a los clásicos.
+    if (m.id === "ELECTRA" && conf < 0.45) peso *= 0.55;
+
+    const dist = m.pred.scores && typeof m.pred.scores === "object"
+      ? m.pred.scores
+      : { [m.pred.label]: conf || 1 };
+
+    for (const [cat, p] of Object.entries(dist)) {
+      const mass = peso * (Number(p) || 0);
+      blend[cat] = (blend[cat] || 0) + mass;
+    }
+    aportes.push({
+      id: m.id,
+      label: m.pred.label,
+      conf,
+      peso: Math.round(peso * 100) / 100,
+    });
   }
 
-  const votos = {};
-  const labels = [rNB.label, rLogReg.label];
-  if (rTrans) labels.push(rTrans.label);
-  labels.forEach((c) => {
-    votos[c] = (votos[c] || 0) + 1;
-  });
+  // Acuerdo clásico NB=LR: empujón moderado a esa categoría.
+  if (rNB.label === rLogReg.label) {
+    const avg = ((Number(rNB.confidence) || 0) + (Number(rLogReg.confidence) || 0)) / 2;
+    blend[rNB.label] = (blend[rNB.label] || 0) + 0.4 * avg;
+  }
 
-  let consenso = rTrans ? rTrans.label : rNB.label;
-  let maxVotos = 0;
-  let empate = false;
-  for (const [c, v] of Object.entries(votos)) {
-    if (v > maxVotos) {
-      maxVotos = v;
-      consenso = c;
-      empate = false;
-    } else if (v === maxVotos) {
-      empate = true;
+  // Acuerdo total de los tres: refuerzo fuerte.
+  if (rTrans && rNB.label === rLogReg.label && rLogReg.label === rTrans.label) {
+    blend[rTrans.label] = (blend[rTrans.label] || 0) + 0.6;
+  }
+
+  let label = rNB.label;
+  let best = -Infinity;
+  for (const [cat, v] of Object.entries(blend)) {
+    if (v > best) {
+      best = v;
+      label = cat;
     }
   }
-  if (empate && rTrans) return rTrans.label;
-  return consenso;
+
+  const electra = aportes.find((a) => a.id === "ELECTRA");
+  const clasicos = aportes.filter((a) => a.id !== "ELECTRA");
+  const mismosClasicos = rNB.label === rLogReg.label;
+  let reason;
+  if (electra && label === electra.label && (!mismosClasicos || rNB.label !== electra.label)) {
+    reason =
+      electra.conf >= 0.8
+        ? `ELECTRA ${(electra.conf * 100).toFixed(0)}% (peso alto)`
+        : `Mezcla ponderada → ${label} (lidera ELECTRA)`;
+  } else if (mismosClasicos && label === rNB.label && (!electra || electra.label !== label)) {
+    reason = `NB+LR de acuerdo (${rNB.label}) frente a ELECTRA`;
+  } else if (mismosClasicos && electra && electra.label === label) {
+    reason = "Unanimidad de modelos";
+  } else {
+    reason = `Mezcla ponderada · ${aportes.map((a) => `${a.id}=${a.label}`).join(" · ")}`;
+  }
+
+  return { label, reason, blend, aportes };
 }
 
 function el(id) {
@@ -495,18 +557,22 @@ function renderResultadosTransformer(rTrans, rSentONNX) {
   }
 }
 
-function renderConsenso(rNB, rLogReg, rTrans, rSens, rSent, consenso) {
+function renderConsenso(rNB, rLogReg, rTrans, rSens, rSent, veredicto) {
+  const consenso = typeof veredicto === "string" ? veredicto : veredicto.label;
+  const reason = typeof veredicto === "object" && veredicto.reason ? veredicto.reason : "";
   const trLabel = rTrans ? rTrans.label : "—";
+  const trConf = rTrans ? ` ${(rTrans.confidence * 100).toFixed(0)}%` : "";
   const cons = el("consenso");
   cons.innerHTML = `
     <div class="consenso-hero">
       <span class="consenso-hero-label">Veredicto NLP · Categoría</span>
       <span class="consenso-hero-valor" style="color:${COLORES_CATEGORIA[consenso] || "#0f172a"}">${consenso}</span>
+      ${reason ? `<span class="consenso-hero-reason muted">${reason}</span>` : ""}
     </div>
     <div class="consenso-grid">
       <div class="consenso-item">
-        <span class="consenso-label">Votos</span>
-        <span class="consenso-extra">NB ${rNB.label} · LR ${rLogReg.label} · TR ${trLabel}</span>
+        <span class="consenso-label">Modelos</span>
+        <span class="consenso-extra">NB ${rNB.label} ${(rNB.confidence * 100).toFixed(0)}% · LR ${rLogReg.label} ${(rLogReg.confidence * 100).toFixed(0)}% · TR ${trLabel}${trConf}</span>
       </div>
       <div class="consenso-item">
         <span class="consenso-label">Tono</span>

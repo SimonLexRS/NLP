@@ -273,24 +273,24 @@ const EDU = {
   consenso: {
     es: {
       title: "Consenso final",
-      what: "Fusiona los votos de los modelos en un veredicto legible para el usuario.",
-      why: "ELECTRA (Transformer) suele captar contexto mejor; si confía ≥55%, define el veredicto; si no, se usa mayoría con desempate ELECTRA.",
+      what: "Fusiona las distribuciones de probabilidad de los modelos en un veredicto ponderado.",
+      why: "No basta el voto a mano alzada: se mezclan scores, confianza, margen top-1/top-2 y acuerdo entre modelos.",
       how: [
-        "Recoger predicciones de categoría de los clasificadores disponibles.",
-        "Si ELECTRA está disponible y confidence ≥ 0.55 → veredicto = ELECTRA.",
-        "Si no, voto mayoritario; en empate preferir ELECTRA.",
-        "Mostrar tono y sentimiento junto al consenso de categoría.",
+        "Pesar cada modelo (ELECTRA > NB > LogReg) por confianza y claridad de la predicción.",
+        "Sumar la masa de probabilidad de cada categoría (blend).",
+        "Bonificar acuerdo NB↔LR y unanimidad; amplificar ELECTRA si confía ≥80%.",
+        "Elegir la categoría con mayor score mezclado y explicar el criterio en la UI.",
       ],
     },
     en: {
       title: "Final consensus",
-      what: "Fuses model votes into a single readable verdict for the user.",
-      why: "ELECTRA usually captures context better; if confidence ≥55% it wins; otherwise majority with ELECTRA as tie-break.",
+      what: "Fuses model probability distributions into a weighted verdict.",
+      why: "Hard majority is weak; blend scores, confidence, top-1/top-2 margin, and inter-model agreement.",
       how: [
-        "Collect category predictions from available classifiers.",
-        "If ELECTRA is available and confidence ≥ 0.55 → verdict = ELECTRA.",
-        "Otherwise majority vote; ties prefer ELECTRA.",
-        "Show tone and sentiment beside the category consensus.",
+        "Weight each model (ELECTRA > NB > LogReg) by confidence and prediction clarity.",
+        "Accumulate probability mass per category (blend).",
+        "Boost NB↔LR agreement and unanimity; amplify ELECTRA when confidence ≥80%.",
+        "Pick the top blended category and show the rationale in the UI.",
       ],
     },
     svg: (L) => svgVoteSketch(L),
@@ -496,6 +496,7 @@ function formatLive(stageId, data) {
           lex: "Léxico",
           consensus: "Categoría consenso",
           votes: "Votos",
+          reason: "Criterio",
           tone: "Tono",
           sentiment: "Sentimiento",
         }
@@ -523,6 +524,7 @@ function formatLive(stageId, data) {
           lex: "Lexicon",
           consensus: "Consensus category",
           votes: "Votes",
+          reason: "Rationale",
           tone: "Tone",
           sentiment: "Sentiment",
         };
@@ -565,6 +567,7 @@ function formatLive(stageId, data) {
     case "consenso":
       add(labels.consensus, data.consensus);
       add(labels.votes, data.votes);
+      if (data.reason) add(labels.reason, data.reason);
       add(labels.tone, data.tone);
       add(labels.sentiment, data.sentiment);
       break;

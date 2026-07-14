@@ -471,6 +471,12 @@ input[type="url"]:focus {
   text-transform: capitalize;
   line-height: 1.2;
 }
+.consenso-hero-reason {
+  font-size: var(--text-sm);
+  margin-top: 2px;
+  max-width: 42rem;
+  line-height: 1.4;
+}
 .consenso-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
