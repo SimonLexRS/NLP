@@ -274,20 +274,22 @@ const EDU = {
     es: {
       title: "Consenso final",
       what: "Fusiona los votos de los modelos en un veredicto legible para el usuario.",
-      why: "Cuando NB, LogReg y ELECTRA discrepan, el voto mayoritario muestra acuerdo e incertidumbre restante.",
+      why: "ELECTRA (Transformer) suele captar contexto mejor; si confía ≥55%, define el veredicto; si no, se usa mayoría con desempate ELECTRA.",
       how: [
         "Recoger predicciones de categoría de los clasificadores disponibles.",
-        "Voto mayoritario; ELECTRA como desempate si está presente.",
+        "Si ELECTRA está disponible y confidence ≥ 0.55 → veredicto = ELECTRA.",
+        "Si no, voto mayoritario; en empate preferir ELECTRA.",
         "Mostrar tono y sentimiento junto al consenso de categoría.",
       ],
     },
     en: {
       title: "Final consensus",
       what: "Fuses model votes into a single readable verdict for the user.",
-      why: "When NB, LogReg, and ELECTRA disagree, majority vote surfaces agreement and remaining uncertainty.",
+      why: "ELECTRA usually captures context better; if confidence ≥55% it wins; otherwise majority with ELECTRA as tie-break.",
       how: [
         "Collect category predictions from available classifiers.",
-        "Majority vote; ELECTRA preferred as tie-break when present.",
+        "If ELECTRA is available and confidence ≥ 0.55 → verdict = ELECTRA.",
+        "Otherwise majority vote; ties prefer ELECTRA.",
         "Show tone and sentiment beside the category consensus.",
       ],
     },

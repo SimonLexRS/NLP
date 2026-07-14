@@ -19,7 +19,7 @@ from transformers import (
 )
 
 MODEL_NAME = "mrm8488/electricidad-small-discriminator"
-MAX_LEN = 128
+MAX_LEN = 512
 DEFAULT_EPOCHS = 8
 DEFAULT_BATCH = 16
 DEFAULT_LR = 2e-4

@@ -17,8 +17,9 @@ env.useBrowserCache = cacheDisponible;
 
 const TIMEOUT_CATEGORIA_MS = 60000;
 const TIMEOUT_SENTIMIENTO_MS = 90000;
-/** ~512 tokens en español ≈ 1800 caracteres. */
-const MAX_CHARS_ONNX = 1800;
+/** ELECTRA max_position_embeddings=512; ~512 tokens en español ≈ 2400 caracteres. */
+const MAX_TOKENS_ONNX = 512;
+const MAX_CHARS_ONNX = 2400;
 
 let categoriaClassifier = null;
 let sentimientoClassifier = null;
@@ -162,7 +163,11 @@ export async function predecirCategoria(texto) {
     await cargarClasificadorCategoria();
   }
   const { texto: input, truncado } = truncarParaModelo(texto);
-  const output = await categoriaClassifier(input, { top_k: 7 });
+  const output = await categoriaClassifier(input, {
+    top_k: 7,
+    truncation: true,
+    max_length: MAX_TOKENS_ONNX,
+  });
 
   let resultados;
   if (Array.isArray(output)) {
@@ -215,7 +220,11 @@ export async function predecirSentimiento(texto) {
     await cargarClasificadorSentimiento();
   }
   const { texto: input, truncado } = truncarParaModelo(texto);
-  const output = await sentimientoClassifier(input, { top_k: 3 });
+  const output = await sentimientoClassifier(input, {
+    top_k: 3,
+    truncation: true,
+    max_length: MAX_TOKENS_ONNX,
+  });
 
   let resultados;
   if (Array.isArray(output)) {

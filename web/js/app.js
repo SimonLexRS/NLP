@@ -375,21 +375,39 @@ function topTfIdfTerms(vector, n = 6) {
     .map(([idx, w]) => `${inv[idx] || `#${idx}`} (${w.toFixed(2)})`);
 }
 
+/** Confianza mínima de ELECTRA para priorizar su label sobre mayoría clásica. */
+const ELECTRA_CONSENSO_MIN_CONF = 0.55;
+
+/**
+ * Veredicto de categoría: si ELECTRA está disponible y confía (>= 0.55),
+ * gana su predicción (evita que NB+LR anulen un Transformer correcto).
+ * Si no, mayoría; empates → ELECTRA si está presente.
+ */
 function categoriaConsenso(rNB, rLogReg, rTrans) {
+  if (rTrans && typeof rTrans.confidence === "number" && rTrans.confidence >= ELECTRA_CONSENSO_MIN_CONF) {
+    return rTrans.label;
+  }
+
   const votos = {};
   const labels = [rNB.label, rLogReg.label];
   if (rTrans) labels.push(rTrans.label);
   labels.forEach((c) => {
     votos[c] = (votos[c] || 0) + 1;
   });
+
   let consenso = rTrans ? rTrans.label : rNB.label;
   let maxVotos = 0;
+  let empate = false;
   for (const [c, v] of Object.entries(votos)) {
     if (v > maxVotos) {
       maxVotos = v;
       consenso = c;
+      empate = false;
+    } else if (v === maxVotos) {
+      empate = true;
     }
   }
+  if (empate && rTrans) return rTrans.label;
   return consenso;
 }
 
@@ -425,7 +443,9 @@ function renderResultadosClasicos(texto, rNB, rLogReg, rSens, rSentLex) {
   const tonoLabel = el("tono-label");
   tonoLabel.textContent = rSens.label === "sensacionalista" ? "Sensacionalista" : "Informativo";
   tonoLabel.style.color = rSens.label === "sensacionalista" ? "#be123c" : "#0f766e";
-  el("tono-score").textContent = `Score: ${(rSens.score * 100).toFixed(0)}%`;
+  el("tono-score").textContent = `Sensacionalismo: ${(rSens.score * 100).toFixed(0)}% · ${
+    rSens.label === "sensacionalista" ? "señales de clickbait" : "sin señales de clickbait"
+  }`;
   const signals = rSens.signals;
   el("tono-signals").innerHTML = `
     <small>

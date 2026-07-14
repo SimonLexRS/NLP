@@ -1,7 +1,7 @@
 """Deteccion de tono sensacionalista (Semana 3: Analisis de Sentimientos + reglas).
 
 Heuristica basada en reglas lexicas sobre el texto crudo:
-  - Patrones clickbait al inicio ("NO CREERAS", "ESCANDALO", "Te sorprendera"...).
+  - Patrones clickbait al inicio / titular (ventana ~220 chars + primera linea).
   - Palabras emocionales (conmocionado, impactante, bomba, catastrofico...).
   - Conteo de signos de exclamacion.
   - Proporcion de mayusculas.
@@ -12,6 +12,8 @@ El umbral por defecto es 0.5.
 """
 import json
 import re
+
+VENTANA_CLICKBAIT = 220
 
 CLICKBAIT_PATTERNS = [
     r"no creeras",
@@ -29,8 +31,24 @@ CLICKBAIT_PATTERNS = [
     r"lo que nadie te dijo",
     r"la verdad oculta",
     r"filtran",
+    r"filtrado",
     r"explota",
     r"bomba",
+    r"impresionante",
+    r"shock",
+    r"crudo",
+    r"revelan",
+    r"rompe el silencio",
+    r"en vivo",
+    r"ultima hora",
+    r"confirmado",
+    r"dimite",
+    r"dimision",
+    r"caos",
+    r"alarma",
+    r"sorprendente",
+    r"indignacion",
+    r"polemica",
 ]
 
 PALABRAS_EMOCIONALES = [
@@ -51,6 +69,17 @@ PALABRAS_EMOCIONALES = [
     "escalofriante",
     "viralo",
     "viral",
+    "impresionante",
+    "shock",
+    "crudo",
+    "indignacion",
+    "caos",
+    "alarma",
+    "dramatico",
+    "tragico",
+    "horror",
+    "urgente",
+    "exclusivo",
 ]
 
 _EXCLAM_RE = re.compile(r"[!¡]+")
@@ -66,6 +95,16 @@ def _normalizar_para_match(texto: str) -> str:
     except Exception:
         # Fallback manual de tildes comunes en espanol.
         return texto.lower().translate(str.maketrans("áéíóúñü", "aeiounu"))
+
+
+def _zona_clickbait(texto_norm: str, ventana: int = VENTANA_CLICKBAIT) -> str:
+    """Primeros N caracteres + primera linea (titular tipico tras extraccion por URL)."""
+    inicio = texto_norm[:ventana]
+    nl = texto_norm.find("\n")
+    primera = texto_norm[:nl] if nl >= 0 else ""
+    if primera:
+        return f"{primera}\n{inicio}"
+    return inicio
 
 
 def analizar_sensacionalismo(texto: str) -> dict:
@@ -85,9 +124,9 @@ def analizar_sensacionalismo(texto: str) -> dict:
     palabras = texto_norm.split()
     n_palabras = max(len(palabras), 1)
 
-    # --- Senal 1: patron clickbait al inicio (peso alto). ---
-    inicio_norm = texto_norm[:80]
-    clickbait_hits = [p for p in CLICKBAIT_PATTERNS if re.search(p, inicio_norm)]
+    # --- Senal 1: patron clickbait al inicio / titular (peso alto). ---
+    zona = _zona_clickbait(texto_norm, VENTANA_CLICKBAIT)
+    clickbait_hits = [p for p in CLICKBAIT_PATTERNS if re.search(p, zona)]
     clickbait_score = min(len(clickbait_hits) * 0.35, 0.6)
 
     # --- Senal 2: palabras emocionales (peso medio). ---
@@ -130,6 +169,7 @@ def exportar_reglas(ruta: str):
         "clickbait_patterns": CLICKBAIT_PATTERNS,
         "palabras_emocionales": PALABRAS_EMOCIONALES,
         "umbral": 0.5,
+        "ventana_clickbait": VENTANA_CLICKBAIT,
         "pesos": {
             "clickbait": 0.35,
             "emocional": 0.15,

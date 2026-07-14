@@ -3,6 +3,9 @@
 
 let REGLAS = null;
 
+/** Ventana por defecto (caracteres) para buscar clickbait en el arranque del texto. */
+const VENTANA_CLICKBAIT_DEFAULT = 220;
+
 /**
  * Carga las reglas desde assets/sensationalism_rules.json.
  */
@@ -21,6 +24,34 @@ function normalizarParaMatch(texto) {
 }
 
 /**
+ * Zona donde buscar clickbait: primeros N caracteres + primera línea (titular vía URL).
+ */
+function zonaClickbait(textoNorm, ventana) {
+  const inicio = textoNorm.slice(0, ventana);
+  const nl = textoNorm.indexOf("\n");
+  const primeraLinea = nl >= 0 ? textoNorm.slice(0, nl) : "";
+  if (primeraLinea && primeraLinea.length > 0 && !inicio.includes(primeraLinea.slice(0, Math.min(40, primeraLinea.length)))) {
+    return `${inicio}\n${primeraLinea}`;
+  }
+  // Incluir siempre la primera línea explícitamente si es más larga que la ventana parcial.
+  if (primeraLinea && primeraLinea.length > 0) {
+    return `${primeraLinea}\n${inicio}`;
+  }
+  return inicio;
+}
+
+function matchClickbait(patterns, zona) {
+  return patterns.filter((p) => {
+    const patNorm = normalizarParaMatch(String(p).replace(/\\/g, ""));
+    try {
+      return new RegExp(p, "i").test(zona) || zona.includes(patNorm);
+    } catch {
+      return zona.includes(patNorm) || zona.includes(String(p).toLowerCase());
+    }
+  });
+}
+
+/**
  * Analiza el tono sensacionalista de un texto.
  * Espejo de sensationalism.analizar_sensacionalismo().
  *
@@ -33,23 +64,18 @@ export function analizar(texto) {
   }
 
   const { clickbait_patterns, palabras_emocionales, umbral, pesos, caps } = REGLAS;
+  const ventana = REGLAS.ventana_clickbait || VENTANA_CLICKBAIT_DEFAULT;
   const textoNorm = normalizarParaMatch(texto);
   const palabras = textoNorm.split(/\s+/);
   const nPalabras = Math.max(palabras.length, 1);
 
-  // Señal 1: patrón clickbait al inicio.
-  const inicioNorm = textoNorm.slice(0, 80);
-  const clickbaitHits = clickbait_patterns.filter((p) => {
-    try {
-      return new RegExp(p).test(inicioNorm);
-    } catch {
-      return inicioNorm.includes(p);
-    }
-  });
+  // Señal 1: patrón clickbait al inicio / titular.
+  const zona = zonaClickbait(textoNorm, ventana);
+  const clickbaitHits = matchClickbait(clickbait_patterns, zona);
   const clickbaitScore = Math.min(clickbaitHits.length * pesos.clickbait, caps.clickbait);
 
   // Señal 2: palabras emocionales.
-  const emocionalHits = palabras_emocionales.filter((p) => textoNorm.includes(p));
+  const emocionalHits = palabras_emocionales.filter((p) => textoNorm.includes(normalizarParaMatch(p)));
   const emocionalScore = Math.min(emocionalHits.length * pesos.emocional, caps.emocional);
 
   // Señal 3: exclamaciones.
