@@ -1881,7 +1881,8 @@ tr:hover {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 7px 12px;
+  padding: 10px 16px;
+  min-height: 44px;
   border: 1px solid rgba(148, 163, 184, 0.3);
   border-radius: var(--radius-md);
   background: transparent;
