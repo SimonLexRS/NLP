@@ -12,6 +12,7 @@ import * as transformer from "./transformer.js";
 import { extraerNoticiaDeURL, validarEsNoticia } from "./url_extractor.js";
 import * as pv from "./pipeline_viz.js";
 import { ensureNotebookLoaded } from "./notebook_viewer.js";
+import { inicializarCompartir } from "./share.js";
 import {
   dibujarBarras,
   dibujarDonut,
@@ -1254,6 +1255,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     tab.addEventListener("click", () => activarTab(tab, tabs));
     tab.addEventListener("keydown", (e) => navegarTabs(e, tab, tabs));
   });
+
+  inicializarCompartir();
 
   await inicializar();
   await cargarMetricas();
