@@ -68,13 +68,13 @@ Sistema de Procesamiento de Lenguaje Natural **punta a punta** que clasifica not
 
 | Modelo | Tipo | Accuracy | Precision | Recall | F1 |
 |--------|------|----------|-----------|--------|-----|
-| Naive Bayes (Multinomial) | Clásico | 97.62% | 97.80% | 97.62% | 97.61% |
-| Logistic Regression | Clásico | 92.86% | 93.52% | 92.86% | 92.51% |
+| Naive Bayes (Multinomial) | Clásico | 97.32% | 97.41% | 97.32% | 97.33% |
+| Logistic Regression | Clásico | 98.21% | 98.29% | 98.21% | 98.21% |
 | **Transformer (ELECTRA-small)** | **Neuronal** | **100.00%** | **100.00%** | **100.00%** | **100.00%** |
 
-Set de test: 84 noticias, 7 categorías.
+Set de test: 224 noticias, 7 categorías.
 
-El Transformer (neuronal) supera a los modelos clásicos, cumpliendo el requisito de comparación clásico vs. neuronal.
+El Transformer (neuronal) supera a los modelos clásicos, cumpliendo el requisito de comparación clásico vs. neuronal. Entre los clásicos, Logistic Regression supera a Naive Bayes en este set.
 
 ## 🚀 Reproducción
 
@@ -88,7 +88,7 @@ El Transformer (neuronal) supera a los modelos clásicos, cumpliendo el requisit
 # 1. Instalar dependencias
 make setup
 
-# 2. Generar dataset sintético (600 noticias)
+# 2. Generar dataset sintético (1500 noticias)
 make data
 
 # 3. Entrenar modelos clásicos (rápido, ~10s)

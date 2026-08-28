@@ -5,10 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Clasificador de Noticias | NLP · PLN</title>
   <meta name="description" content="Herramienta NLP: clasifica noticias en español por categoría, tono y sentimiento. Naive Bayes, Logistic Regression y Transformer ELECTRA en el navegador." />
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+  <meta name="theme-color" content="#0b1220" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/styles.css?v=20260713m" />
+  <link rel="stylesheet" href="css/styles.css?v=20260828b" />
   <script type="importmap">
   {
     "imports": {
@@ -18,6 +20,8 @@
   </script>
 </head>
 <body>
+  <a class="skip-link" href="#panel-analizar">Saltar al contenido principal</a>
+
   <header class="header">
     <div class="container header-inner">
       <div class="brand">
@@ -30,27 +34,44 @@
   </header>
 
   <nav class="tabs-nav container" aria-label="Secciones">
-    <div class="tabs-track">
-      <button class="tab active" data-target="panel-analizar">Analizar</button>
-      <button class="tab" data-target="panel-url">Por URL</button>
-      <button class="tab" data-target="panel-lote">Modo lote</button>
-      <button class="tab" data-target="panel-metricas">Métricas</button>
-      <button class="tab" data-target="panel-notebook">Notebook</button>
-      <button class="tab" data-target="panel-about">Acerca de</button>
+    <div class="tabs-track" role="tablist" aria-label="Secciones de la herramienta">
+      <button class="tab active" id="tab-analizar" role="tab" aria-selected="true" aria-controls="panel-analizar" data-target="panel-analizar">Analizar</button>
+      <button class="tab" id="tab-url" role="tab" aria-selected="false" aria-controls="panel-url" tabindex="-1" data-target="panel-url">Por URL</button>
+      <button class="tab" id="tab-lote" role="tab" aria-selected="false" aria-controls="panel-lote" tabindex="-1" data-target="panel-lote">Modo lote</button>
+      <button class="tab" id="tab-metricas" role="tab" aria-selected="false" aria-controls="panel-metricas" tabindex="-1" data-target="panel-metricas">Métricas</button>
+      <button class="tab" id="tab-notebook" role="tab" aria-selected="false" aria-controls="panel-notebook" tabindex="-1" data-target="panel-notebook">Notebook</button>
+      <button class="tab" id="tab-about" role="tab" aria-selected="false" aria-controls="panel-about" tabindex="-1" data-target="panel-about">Acerca de</button>
     </div>
   </nav>
 
   <main class="container">
+    <noscript>
+      <div class="estado error">
+        Esta herramienta necesita JavaScript: toda la inferencia (Naive Bayes, Logistic
+        Regression, ELECTRA y RoBERTuito) se ejecuta en tu navegador. Actívalo y recarga la página.
+      </div>
+    </noscript>
+
+    <!-- Barra global de progreso de descarga de modelos (ELECTRA / RoBERTuito). -->
+    <div id="progreso-modelos" class="progreso-modelos" style="display:none;"></div>
+
     <!-- =================== PANEL ANALIZAR =================== -->
-    <section id="panel-analizar" class="tab-panel active">
+    <section id="panel-analizar" class="tab-panel active" role="tabpanel" aria-labelledby="tab-analizar" tabindex="0">
       <div class="input-section surface-panel">
         <label for="input-texto" class="label">Pega una noticia (titular + cuerpo)</label>
         <textarea id="input-texto" rows="5" placeholder="Ej: El gobierno anunció un nuevo plan económico para frenar la inflación…"></textarea>
         <div id="ejemplos" class="ejemplos"></div>
         <div class="actions">
           <button id="btn-analizar" class="btn btn-primary">Analizar noticia</button>
+          <button id="btn-precargar-sentimiento" class="btn btn-secondary" type="button" style="display:none;">
+            Precargar modelo de sentimiento (~25 MB)
+          </button>
           <span class="hint">Ctrl+Enter para analizar</span>
         </div>
+        <p class="hint">
+          El modelo de sentimiento RoBERTuito (~25&nbsp;MB) se descarga solo cuando analizas;
+          puedes traerlo por adelantado con el botón.
+        </p>
         <div id="estado" class="estado" style="display:none;" role="status"></div>
       </div>
 
@@ -87,6 +108,17 @@
               </div>
             </div>
 
+            <div class="card" id="tema-section" style="display:none;">
+              <h3>Temas (LDA)</h3>
+              <div class="resultado-principal">
+                <span id="tema-label" class="valor-grande"></span>
+              </div>
+              <p id="tema-sim" class="muted"></p>
+              <h4 class="subtitulo">Palabras del tema</h4>
+              <p id="tema-topwords" class="tema-topwords"></p>
+              <div id="tema-dist" class="dist"></div>
+            </div>
+
             <div class="card">
               <h3>Tono</h3>
               <div class="resultado-principal">
@@ -120,15 +152,17 @@
     </section>
 
     <!-- =================== PANEL URL =================== -->
-    <section id="panel-url" class="tab-panel">
+    <section id="panel-url" class="tab-panel" role="tabpanel" aria-labelledby="tab-url" tabindex="0">
       <div class="input-section surface-panel">
         <label for="input-url" class="label">URL de una noticia</label>
         <div class="url-input-row">
           <input type="url" id="input-url" placeholder="https://www.bbc.com/mundo/noticias-…" />
           <button id="btn-analizar-url" class="btn btn-primary">Analizar URL</button>
         </div>
+        <div id="ejemplos-url" class="ejemplos"></div>
         <p class="hint">
           Extrae el texto vía reader (sin backend) y lo pasa por el mismo <strong>pipeline NLP</strong>.
+          Las portadas de ejemplo sirven para ver el aviso del extractor cuando la página no es un artículo.
           Artículos largos se truncarán solo para ELECTRA (~512 tokens).
         </p>
         <div id="estado-url" class="estado" style="display:none;" role="status"></div>
@@ -178,6 +212,17 @@
                 </div>
               </div>
 
+              <div class="card" id="url-tema-section" style="display:none;">
+                <h3>Temas (LDA)</h3>
+                <div class="resultado-principal">
+                  <span id="url-tema-label" class="valor-grande"></span>
+                </div>
+                <p id="url-tema-sim" class="muted"></p>
+                <h4 class="subtitulo">Palabras del tema</h4>
+                <p id="url-tema-topwords" class="tema-topwords"></p>
+                <div id="url-tema-dist" class="dist"></div>
+              </div>
+
               <div class="card">
                 <h3>Tono</h3>
                 <div class="resultado-principal">
@@ -212,7 +257,7 @@
     </section>
 
     <!-- =================== PANEL LOTE =================== -->
-    <section id="panel-lote" class="tab-panel">
+    <section id="panel-lote" class="tab-panel" role="tabpanel" aria-labelledby="tab-lote" tabindex="0">
       <div class="input-section surface-panel">
         <label for="csv-input" class="label">Sube un CSV con noticias (columna «texto»)</label>
         <input type="file" id="csv-input" accept=".csv" />
@@ -234,16 +279,21 @@
           </div>
         </div>
         <div class="card">
-          <h3>Detalle (primeras 20)</h3>
+          <div class="lote-head">
+            <h3>Detalle (primeras 20)</h3>
+            <button id="lote-descargar" class="btn btn-secondary" type="button" style="display:none;">
+              Descargar resultados (CSV)
+            </button>
+          </div>
           <div id="lote-tabla" class="tabla-wrap"></div>
         </div>
       </div>
     </section>
 
     <!-- =================== PANEL MÉTRICAS =================== -->
-    <section id="panel-metricas" class="tab-panel">
+    <section id="panel-metricas" class="tab-panel" role="tabpanel" aria-labelledby="tab-metricas" tabindex="0">
       <h2 class="panel-heading">Comparación de modelos</h2>
-      <p class="muted">Evaluación sobre el set de test (84 noticias, 7 categorías).</p>
+      <p class="muted">Evaluación sobre el set de test (224 noticias, 7 categorías).</p>
       <div class="card">
         <div id="metricas-tabla" class="tabla-wrap"></div>
       </div>
@@ -252,7 +302,7 @@
     </section>
 
     <!-- =================== PANEL NOTEBOOK =================== -->
-    <section id="panel-notebook" class="tab-panel">
+    <section id="panel-notebook" class="tab-panel" role="tabpanel" aria-labelledby="tab-notebook" tabindex="0">
       <div class="notebook-panel-head">
         <div>
           <h2 class="panel-heading">Notebook · comparación de modelos</h2>
@@ -275,7 +325,7 @@
     </section>
 
     <!-- =================== PANEL ABOUT =================== -->
-    <section id="panel-about" class="tab-panel">
+    <section id="panel-about" class="tab-panel" role="tabpanel" aria-labelledby="tab-about" tabindex="0">
       <h2 class="panel-heading">Acerca de este proyecto NLP</h2>
 
       <div class="about-institution">
@@ -362,6 +412,8 @@
         <p>100% estática: toda la inferencia ocurre en el navegador. Naive Bayes y Logistic Regression usan pesos exportados a JSON. ELECTRA y RoBERTuito se cargan como ONNX con <code>transformers.js</code>. Sin backend en tiempo de ejecución.</p>
       </div>
     </section>
+    <!-- Región viva global: anuncia el resultado del análisis a lectores de pantalla. -->
+    <div id="anuncio-live" class="sr-only" role="status" aria-live="polite"></div>
   </main>
 
   <footer class="footer">
@@ -379,6 +431,6 @@
     </div>
   </footer>
 
-  <script type="module" src="js/app.js?v=20260713m"></script>
+  <script type="module" src="js/app.js?v=20260828b"></script>
 </body>
 </html>

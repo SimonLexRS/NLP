@@ -19,6 +19,24 @@ const COLORES_SENTIMIENTO = {
 };
 
 /**
+ * Lee una custom property de :root. Los gráficos son SVG inline con colores
+ * hardcodeados, así que toman el fondo/etiquetas del tema activo para seguir
+ * siendo legibles en modo oscuro.
+ */
+function colorTema(nombre, alternativa) {
+  if (typeof window === "undefined" || !document.documentElement) return alternativa;
+  const valor = getComputedStyle(document.documentElement).getPropertyValue(nombre).trim();
+  return valor || alternativa;
+}
+
+// Colores del tema, resueltos al dibujar (no al cargar el módulo) por si el
+// usuario cambia el tema con la página abierta.
+const pista = () => colorTema("--chart-track", "#e5e7eb");
+const etiqueta = () => colorTema("--chart-label", "#374151");
+const valorTxt = () => colorTema("--chart-value", "#6b7280");
+const centro = () => colorTema("--chart-label", "#1f2937");
+
+/**
  * Dibuja barras horizontales para una distribución de probabilidades.
  * container: elemento DOM donde se inserta el SVG.
  * datos: { etiqueta: valor } (valores 0-1).
@@ -39,14 +57,14 @@ export function dibujarBarras(container, datos, colorMap = {}) {
     const w = (valor / max) * (ancho - 120);
     const color = colorMap[label] || "#3b82f6";
     // Barra de fondo.
-    svg += `<rect x="100" y="${y}" width="${ancho - 120}" height="${altoBarra}" fill="#e5e7eb" rx="3"/>`;
+    svg += `<rect x="100" y="${y}" width="${ancho - 120}" height="${altoBarra}" fill="${pista()}" rx="3"/>`;
     // Barra de valor.
     svg += `<rect x="100" y="${y}" width="${Math.max(w, 1)}" height="${altoBarra}" fill="${color}" rx="3"/>`;
     // Etiqueta.
-    svg += `<text x="95" y="${y + altoBarra / 2 + 4}" text-anchor="end" font-size="12" fill="#374151" font-family="sans-serif">${label}</text>`;
+    svg += `<text x="95" y="${y + altoBarra / 2 + 4}" text-anchor="end" font-size="12" fill="${etiqueta()}" font-family="sans-serif">${label}</text>`;
     // Valor.
     const pct = (valor * 100).toFixed(1);
-    svg += `<text x="${ancho - 8}" y="${y + altoBarra / 2 + 4}" text-anchor="end" font-size="11" fill="#6b7280" font-family="sans-serif">${pct}%</text>`;
+    svg += `<text x="${ancho - 8}" y="${y + altoBarra / 2 + 4}" text-anchor="end" font-size="11" fill="${valorTxt()}" font-family="sans-serif">${pct}%</text>`;
   });
   svg += "</svg>";
 
@@ -102,7 +120,7 @@ export function dibujarDonut(container, datos, colorMap = {}, centroLabel = "") 
 
   // Texto central.
   if (centroLabel) {
-    svg += `<text x="${cx}" y="${cy + 5}" text-anchor="middle" font-size="14" font-weight="bold" fill="#1f2937" font-family="sans-serif">${centroLabel}</text>`;
+    svg += `<text x="${cx}" y="${cy + 5}" text-anchor="middle" font-size="14" font-weight="bold" fill="${centro()}" font-family="sans-serif">${centroLabel}</text>`;
   }
 
   svg += "</svg>";
@@ -118,7 +136,7 @@ export function dibujarBarraConfianza(container, valor, color = "#3b82f6") {
   const alto = 12;
   const w = valor * (ancho - 2);
   const svg = `<svg width="100%" height="${alto}" viewBox="0 0 ${ancho} ${alto}" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-    <rect x="1" y="1" width="${ancho - 2}" height="${alto - 2}" fill="#e5e7eb" rx="5"/>
+    <rect x="1" y="1" width="${ancho - 2}" height="${alto - 2}" fill="${pista()}" rx="5"/>
     <rect x="1" y="1" width="${Math.max(w, 1)}" height="${alto - 2}" fill="${color}" rx="5"/>
     <text x="${ancho / 2}" y="${alto - 2}" text-anchor="middle" font-size="9" fill="white" font-family="sans-serif" font-weight="bold">${pct}%</text>
   </svg>`;

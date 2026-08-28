@@ -35,12 +35,12 @@ Dada una noticia en español (titular + cuerpo), el sistema predice automáticam
 
 ## Slide 3: Los datos
 
-**Dataset sintético** de 600 noticias en español, generado por código (`backend/data/generate_dataset.py`).
+**Dataset sintético** de 1500 noticias en español, generado por código (`backend/data/generate_dataset.py`).
 
 - **7 categorías** balanceadas (~85 c/u)
 - **2 tonos**: 60% informativo / 40% sensacionalista
 - **3 sentimientos**: 40% positivo / 40% negativo / 20% neutro
-- **Split**: 432 train / 84 val / 84 test (estratificado por categoría)
+- **Split**: 1052 train / 224 val / 224 test (estratificado por categoría)
 
 **Diseño para realismo**: sujetos compartidos entre categorías (ej. "el gobierno" aparece en política, economía, salud...), obligando a los modelos a entender el contexto (acción), no solo palabras clave. Ruido léxico añadido (duplicaciones, relleno neutro).
 
@@ -117,14 +117,14 @@ En JS: lematización por sufijos (ligera) + diccionario de stopwords exportado.
 
 | Modelo | Tipo | Accuracy | F1 |
 |--------|------|----------|-----|
-| Naive Bayes | Clásico | 97.62% | 97.61% |
-| Logistic Regression | Clásico | 92.86% | 92.51% |
+| Naive Bayes | Clásico | 97.32% | 97.33% |
+| Logistic Regression | Clásico | 98.21% | 98.21% |
 | **Transformer (ELECTRA)** | **Neuronal** | **100.00%** | **100.00%** |
 
 **Análisis**:
 - El Transformer supera a los clásicos (esperado: captura contexto y semántica).
-- NB > LogReg porque las palabras distintivas por categoría son fuertes señales léxicas (NB las aprovecha bien con TF-IDF).
-- Los errores de los clásicos ocurren en noticias donde el sujeto es ambiguo y la acción no es suficientemente distintiva.
+- LogReg > NB en este set: con 224 noticias de test y vocabulario acotado, la frontera lineal regularizada generaliza mejor que la independencia condicional de NB.
+- Los errores de los clásicos se concentran en internacional y cultura, cuyos vocabularios solapan con política y economía.
 
 *(Mostrar matrices de confusión)*
 

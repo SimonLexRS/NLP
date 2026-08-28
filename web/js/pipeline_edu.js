@@ -140,6 +140,40 @@ const EDU = {
             ["Vector", "sparse"],
           ]),
   },
+  temas: {
+    es: {
+      title: "Modelado de temas (LDA)",
+      what: "Descubre de qué temas habla el corpus y sitúa cada noticia entre ellos, sin usar etiquetas.",
+      why: "Complementa la categoría supervisada: describe el contenido con vocabulario propio del tema y permite explorar agrupaciones no anotadas.",
+      how: [
+        "Los temas ya fueron entrenados con LDA y exportados como matriz tema×término.",
+        "El texto preprocesado se convierte en conteos sobre el vocabulario LDA.",
+        "Similitud coseno contra cada tema → distribución afilada y tema ganador.",
+      ],
+    },
+    en: {
+      title: "Topic modeling (LDA)",
+      what: "Discovers what the corpus talks about and places each article across those topics, with no labels.",
+      why: "Complements supervised categories: it describes the article with the topic's own vocabulary and reveals unlabeled groupings.",
+      how: [
+        "Topics were pre-trained with LDA and exported as a topic×term matrix.",
+        "The preprocessed text becomes counts over the LDA vocabulary.",
+        "Cosine similarity against each topic → sharpened distribution and winning topic.",
+      ],
+    },
+    svg: (L) =>
+      L === "es"
+        ? svgFlow([
+            ["Conteos", "vocab LDA"],
+            ["Coseno", "× temas"],
+            ["Tema", "top palabras"],
+          ])
+        : svgFlow([
+            ["Counts", "LDA vocab"],
+            ["Cosine", "× topics"],
+            ["Topic", "top words"],
+          ]),
+  },
   nb: {
     es: {
       title: "Naive Bayes",
@@ -541,6 +575,14 @@ function formatLive(stageId, data) {
     case "vectorize":
       add(labels.terms, data.nTerms);
       add(labels.top, Array.isArray(data.topTerms) ? data.topTerms.join(", ") : data.topTerms);
+      break;
+    case "temas":
+      add(labels.topic, data.topicId != null ? labels.topicN(data.topicId) : null);
+      add(labels.keywords, Array.isArray(data.topWords) ? data.topWords.join(", ") : data.topWords);
+      add(
+        labels.score,
+        data.similarity != null ? `${(data.similarity * 100).toFixed(0)}% coseno` : null
+      );
       break;
     case "nb":
     case "logreg":

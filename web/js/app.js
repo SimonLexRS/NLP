@@ -7,6 +7,7 @@ import * as nb from "./naive_bayes.js";
 import * as logreg from "./logreg.js";
 import * as sensationalism from "./sensationalism.js";
 import * as sentimentLex from "./sentiment_lexicon.js";
+import * as lda from "./lda.js";
 import * as transformer from "./transformer.js";
 import { extraerNoticiaDeURL, validarEsNoticia } from "./url_extractor.js";
 import * as pv from "./pipeline_viz.js";
@@ -19,9 +20,21 @@ import {
   COLORES_SENTIMIENTO,
 } from "./charts.js";
 
+// Paleta fija para los 7 temas LDA (tonos desaturados para no competir con las categorías).
+const COLORES_TEMAS = {
+  "Tema 0": "#0f766e",
+  "Tema 1": "#2563eb",
+  "Tema 2": "#7c3aed",
+  "Tema 3": "#0891b2",
+  "Tema 4": "#ea580c",
+  "Tema 5": "#db2777",
+  "Tema 6": "#65a30d",
+};
+
 let inicializado = false;
-let modelosCargados = { nb: false, logreg: false, lexico: false, reglas: false };
+let modelosCargados = { nb: false, logreg: false, lexico: false, reglas: false, lda: false };
 let transformerListo = { categoria: false, sentimiento: false };
+let cargandoSentimiento = false;
 let ejemplosNoticias = [];
 let precargaIniciada = false;
 
@@ -30,12 +43,17 @@ async function inicializar() {
   mostrarEstado("Cargando modelos clásicos...", "info");
 
   try {
-    const [nbData, logregData, stopw, lexic, reglas, ejemplos] = await Promise.all([
+    const [nbData, logregData, stopw, lexic, reglas, temas, ejemplos] = await Promise.all([
       nb.cargarNB(),
       logreg.cargarLogReg(),
       preprocess.cargarStopwords(),
       sentimentLex.cargarLexico(),
       sensationalism.cargarReglas(),
+      // LDA es complementario: si el JSON falla, el análisis sigue sin temas.
+      lda.cargarLDA().catch((e) => {
+        console.warn("Temas LDA no disponibles:", e);
+        return null;
+      }),
       cargarEjemplos(),
     ]);
 
@@ -43,7 +61,13 @@ async function inicializar() {
     vectorize.setVocab(vi.vocabulary, vi.idf, vi.ngram_range);
     preprocess.construirLemmaMap(vi.vocabulary);
 
-    modelosCargados = { nb: true, logreg: true, lexico: true, reglas: true };
+    modelosCargados = {
+      nb: true,
+      logreg: true,
+      lexico: true,
+      reglas: true,
+      lda: temas !== null,
+    };
     inicializado = true;
     ejemplosNoticias = ejemplos;
     mostrarBotonesEjemplos();
@@ -56,6 +80,7 @@ async function inicializar() {
       mostrarEstado("Listo. Puedes analizar una noticia.", "ok");
     }
     programarPrecarga();
+    actualizarBotonPrecargaSentimiento();
   } catch (e) {
     console.error(e);
     mostrarEstado("Error cargando modelos: " + e.message, "error");
@@ -73,28 +98,68 @@ function programarPrecarga() {
   }
 }
 
+/**
+ * Precarga en segundo plano SOLO ELECTRA (~14 MB).
+ * RoBERTuito (~25 MB) se deja para el primer análisis o para el botón de precarga:
+ * es la mejora de carga diferida prevista en docs/informe.md ("lazy-loading
+ * diferido del modelo de sentimiento") y recorta ~25 MB de la primera visita.
+ */
 async function precargarModelosONNX() {
-  if (!transformerListo.categoria) {
-    try {
-      mostrarEstado("Precargando ELECTRA en segundo plano (~14 MB)…", "info");
-      await transformer.cargarClasificadorCategoria((prog, file) => {
-        mostrarEstado(`Precargando ELECTRA: ${prog.toFixed(0)}%`, "info");
-      });
-      transformerListo.categoria = true;
-      mostrarEstado("ELECTRA listo. Puedes analizar.", "ok");
-    } catch (e) {
-      console.warn("Precarga ELECTRA falló:", e);
-      mostrarEstado("Listo (ELECTRA se cargará al analizar).", "ok");
-    }
+  if (transformerListo.categoria) return;
+  try {
+    mostrarEstado("Precargando ELECTRA en segundo plano (~14 MB)…", "info");
+    await transformer.cargarClasificadorCategoria((prog, file) => {
+      mostrarEstado(`Precargando ELECTRA: ${prog.toFixed(0)}%`, "info");
+      actualizarProgresoCarga("ELECTRA", prog, file, { silencioso: true });
+    });
+    transformerListo.categoria = true;
+    ocultarProgresoCarga();
+    mostrarEstado("ELECTRA listo. Puedes analizar.", "ok");
+  } catch (e) {
+    console.warn("Precarga ELECTRA falló:", e);
+    ocultarProgresoCarga();
+    mostrarEstado("Listo (ELECTRA se cargará al analizar).", "ok");
   }
-  if (!transformerListo.sentimiento) {
-    try {
-      await transformer.cargarClasificadorSentimiento();
-      transformerListo.sentimiento = true;
-    } catch (e) {
-      console.warn("Precarga RoBERTuito falló (se usará léxico si hace falta):", e);
-    }
+  actualizarBotonPrecargaSentimiento();
+}
+
+/**
+ * Descarga el modelo de sentimiento RoBERTuito (~25 MB) a petición.
+ * Devuelve true si quedó listo (ya estaba, o se cargó ahora).
+ */
+async function cargarModeloSentimiento() {
+  if (transformerListo.sentimiento) return true;
+  try {
+    await transformer.cargarClasificadorSentimiento((prog, file) => {
+      actualizarProgresoCarga("sentimiento", prog, file);
+    });
+    transformerListo.sentimiento = true;
+    return true;
+  } catch (e) {
+    console.warn("Carga de RoBERTuito falló (se usará léxico si hace falta):", e);
+    return false;
+  } finally {
+    ocultarProgresoCarga();
+    actualizarBotonPrecargaSentimiento();
   }
+}
+
+/**
+ * Estado del botón de precarga del modelo de sentimiento.
+ * Se oculta cuando ya está descargado (o si no existe el botón).
+ */
+function actualizarBotonPrecargaSentimiento() {
+  const btn = document.getElementById("btn-precargar-sentimiento");
+  if (!btn) return;
+  if (transformerListo.sentimiento) {
+    btn.style.display = "none";
+    return;
+  }
+  btn.style.display = "inline-flex";
+  btn.disabled = cargandoSentimiento;
+  btn.textContent = cargandoSentimiento
+    ? "Precargando RoBERTuito…"
+    : "Precargar modelo de sentimiento (~25 MB)";
 }
 
 async function cargarEjemplos() {
@@ -243,6 +308,26 @@ async function ejecutarAnalisis(texto) {
     });
     await pv.completarEtapa("vectorize", `${vector.size} términos`);
 
+    // Temas LDA (Semana 3): asignación por similitud coseno contra los temas precomputados.
+    let rTema = null;
+    if (modelosCargados.lda) {
+      await pv.iniciarEtapa("temas");
+      try {
+        rTema = lda.predecirTema(tokens);
+        pv.setLiveData("temas", {
+          topicId: rTema.topicId,
+          similarity: rTema.similarity,
+          topWords: rTema.topWords.map(([w]) => w).slice(0, 5),
+        });
+        await pv.completarEtapa("temas", `Tema ${rTema.topicId}`);
+      } catch (e) {
+        console.warn("Temas LDA falló:", e);
+        pv.errorEtapa("temas", "LDA");
+      }
+    } else {
+      pv.omitirEtapa("temas", "LDA no disponible");
+    }
+
     await pv.iniciarEtapa("nb");
     const rNB = nb.predecir(vector);
     pv.setLiveData("nb", { label: rNB.label, confidence: rNB.confidence });
@@ -304,9 +389,10 @@ async function ejecutarAnalisis(texto) {
         mostrarEstado("Cargando RoBERTuito (~25 MB)…", "info");
         await transformer.cargarClasificadorSentimiento((prog, file) => {
           pv.actualizarProgreso("sentiment", prog, file);
-          actualizarProgresoCarga("sentimiento", prog, file);
+          actualizarProgresoCarga("sentimiento", prog, file, { silencioso: true });
         });
         transformerListo.sentimiento = true;
+        actualizarBotonPrecargaSentimiento();
       }
       rSentONNX = await transformer.predecirSentimiento(texto);
     } catch (e) {
@@ -325,7 +411,7 @@ async function ejecutarAnalisis(texto) {
       pv.omitirEtapa("sentiment", `Léxico: ${sentFinal.label}`);
     }
 
-    renderResultadosClasicos(texto, rNB, rLogReg, rSens, rSentLex);
+    renderResultadosClasicos(texto, rNB, rLogReg, rSens, rSentLex, rTema);
     if (rTrans) {
       renderResultadosTransformer(rTrans, rSentONNX);
     } else if (rSentONNX) {
@@ -355,10 +441,15 @@ async function ejecutarAnalisis(texto) {
     if (resultados) resultados.style.display = "block";
     if (detalle) detalle.style.display = "block";
     mostrarEstado("Análisis completo.", "ok");
+    anunciar(
+      `Análisis completo. Categoría: ${catConsenso}. Tono: ${rSens.label}. Sentimiento: ${sentFinal.label}.`
+    );
   } catch (e) {
     console.error(e);
     mostrarEstado("Error en el análisis: " + e.message, "error");
+    anunciar("Error en el análisis: " + e.message);
   } finally {
+    ocultarProgresoCarga();
     setAnalizando(false);
   }
 }
@@ -487,24 +578,30 @@ function el(id) {
   return panelActivo.querySelector("#" + id) || document.getElementById(id);
 }
 
-function renderResultadosClasicos(texto, rNB, rLogReg, rSens, rSentLex) {
+function renderResultadosClasicos(texto, rNB, rLogReg, rSens, rSentLex, rTema) {
   const res = el("resultados");
   if (res) res.style.display = "block";
   const detalle = el("resultados-detalle");
   if (detalle) detalle.style.display = "block";
 
+  renderTemas(rTema);
+
   const catLabel = el("cat-label");
   const catBar = el("cat-bar");
   catLabel.textContent = rNB.label;
-  catLabel.style.color = COLORES_CATEGORIA[rNB.label] || "#0f172a";
-  dibujarBarraConfianza(catBar, rNB.confidence, COLORES_CATEGORIA[rNB.label] || "#0f766e");
+  catLabel.style.color = COLORES_CATEGORIA[rNB.label] || cssVar("--ink", "#0f172a");
+  dibujarBarraConfianza(
+    catBar,
+    rNB.confidence,
+    COLORES_CATEGORIA[rNB.label] || cssVar("--accent", "#0f766e")
+  );
 
   dibujarBarras(el("cat-dist-nb"), rNB.scores, COLORES_CATEGORIA);
   dibujarBarras(el("cat-dist-logreg"), rLogReg.scores, COLORES_CATEGORIA);
 
   const tonoLabel = el("tono-label");
   tonoLabel.textContent = rSens.label === "sensacionalista" ? "Sensacionalista" : "Informativo";
-  tonoLabel.style.color = rSens.label === "sensacionalista" ? "#be123c" : "#0f766e";
+  tonoLabel.style.color = colorTono()[rSens.label === "sensacionalista" ? "sensacionalista" : "informativo"];
   el("tono-score").textContent = `Sensacionalismo: ${(rSens.score * 100).toFixed(0)}% · ${
     rSens.label === "sensacionalista" ? "señales de clickbait" : "sin señales de clickbait"
   }`;
@@ -533,15 +630,43 @@ function renderResultadosClasicos(texto, rNB, rLogReg, rSens, rSentLex) {
   );
 }
 
+/**
+ * Card "Temas (LDA)": tema dominante + top palabras + distribución de similitudes.
+ * Sin LDA cargado la card se oculta (no bloquea el resto de resultados).
+ */
+function renderTemas(rTema) {
+  const sec = el("tema-section");
+  if (!sec) return;
+  if (!rTema) {
+    sec.style.display = "none";
+    return;
+  }
+
+  const dist = {};
+  rTema.distribution.forEach((p, i) => {
+    dist[`Tema ${i}`] = p;
+  });
+  dibujarBarras(el("tema-dist"), dist, COLORES_TEMAS);
+
+  const topWords = rTema.topWords.map(([w]) => w);
+  el("tema-topwords").textContent = topWords.join(" · ");
+  el("tema-sim").textContent = `Similitud coseno: ${(rTema.similarity * 100).toFixed(0)}%`;
+
+  const label = el("tema-label");
+  label.textContent = `Tema ${rTema.topicId}`;
+  label.style.color = COLORES_TEMAS[`Tema ${rTema.topicId}`] || cssVar("--accent", "#0f766e");
+  sec.style.display = "block";
+}
+
 function renderResultadosTransformer(rTrans, rSentONNX) {
   if (rTrans && el("trans-section")) {
     const transLabel = el("trans-label");
     transLabel.textContent = rTrans.label;
-    transLabel.style.color = COLORES_CATEGORIA[rTrans.label] || "#0f172a";
+    transLabel.style.color = COLORES_CATEGORIA[rTrans.label] || cssVar("--ink", "#0f172a");
     dibujarBarraConfianza(
       el("trans-bar"),
       rTrans.confidence,
-      COLORES_CATEGORIA[rTrans.label] || "#0f766e"
+      COLORES_CATEGORIA[rTrans.label] || cssVar("--accent", "#0f766e")
     );
     dibujarBarras(el("cat-dist-trans"), rTrans.scores, COLORES_CATEGORIA);
     el("trans-section").style.display = "block";
@@ -566,7 +691,7 @@ function renderConsenso(rNB, rLogReg, rTrans, rSens, rSent, veredicto) {
   cons.innerHTML = `
     <div class="consenso-hero">
       <span class="consenso-hero-label">Veredicto NLP · Categoría</span>
-      <span class="consenso-hero-valor" style="color:${COLORES_CATEGORIA[consenso] || "#0f172a"}">${consenso}</span>
+      <span class="consenso-hero-valor" style="color:${COLORES_CATEGORIA[consenso] || cssVar("--ink", "#0f172a")}">${consenso}</span>
       ${reason ? `<span class="consenso-hero-reason muted">${reason}</span>` : ""}
     </div>
     <div class="consenso-grid">
@@ -576,7 +701,7 @@ function renderConsenso(rNB, rLogReg, rTrans, rSens, rSent, veredicto) {
       </div>
       <div class="consenso-item">
         <span class="consenso-label">Tono</span>
-        <span class="consenso-valor" style="color:${rSens.label === "sensacionalista" ? "#be123c" : "#0f766e"}">${rSens.label}</span>
+        <span class="consenso-valor" style="color:${colorTono()[rSens.label === "sensacionalista" ? "sensacionalista" : "informativo"]}">${rSens.label}</span>
       </div>
       <div class="consenso-item">
         <span class="consenso-label">Sentimiento</span>
@@ -587,44 +712,170 @@ function renderConsenso(rNB, rLogReg, rTrans, rSens, rSent, veredicto) {
   if (sec) sec.style.display = "block";
 }
 
+/**
+ * Parser CSV con soporte de comillas dobles, comillas escapadas ("")
+ * y celdas multilínea (RFC 4180). Devuelve array de filas (array de celdas).
+ */
+function parsearCSV(texto) {
+  const filas = [];
+  let fila = [];
+  let celda = "";
+  let entreComillas = false;
+
+  for (let i = 0; i < texto.length; i++) {
+    const ch = texto[i];
+    if (entreComillas) {
+      if (ch === '"') {
+        if (texto[i + 1] === '"') {
+          celda += '"';
+          i++;
+        } else {
+          entreComillas = false;
+        }
+      } else {
+        celda += ch;
+      }
+      continue;
+    }
+    if (ch === '"') {
+      entreComillas = true;
+    } else if (ch === ",") {
+      fila.push(celda);
+      celda = "";
+    } else if (ch === "\n") {
+      fila.push(celda);
+      celda = "";
+      filas.push(fila);
+      fila = [];
+    } else if (ch === "\r") {
+      // ignorado: \r\n y \r suelto se tratan como fin de línea
+      if (texto[i + 1] !== "\n") {
+        fila.push(celda);
+        celda = "";
+        filas.push(fila);
+        fila = [];
+      }
+    } else {
+      celda += ch;
+    }
+  }
+  if (celda !== "" || fila.length) {
+    fila.push(celda);
+    filas.push(fila);
+  }
+  return filas.filter((f) => f.some((c) => c.trim()));
+}
+
 async function analizarCSV(file) {
   mostrarEstado("Procesando CSV...", "info");
   const text = await file.text();
-  const lineas = text.split(/\r?\n/).filter((l) => l.trim());
-  if (lineas.length < 2) {
+  const filas = parsearCSV(text);
+  if (filas.length < 2) {
     mostrarEstado("El CSV necesita cabecera + al menos 1 fila.", "warn");
     return;
   }
 
-  const cabecera = lineas[0].split(",").map((c) => c.trim().toLowerCase());
+  const cabecera = filas[0].map((c) => c.trim().toLowerCase());
   const textoIdx = cabecera.findIndex((c) => c.includes("text") || c.includes("texto"));
-  const textos = [];
-  for (let i = 1; i < lineas.length; i++) {
-    let linea = lineas[i];
-    if (textoIdx > 0) {
-      const partes = linea.split(",");
-      textos.push(partes.slice(textoIdx).join(","));
-    } else {
-      textos.push(linea);
-    }
+  if (textoIdx === -1) {
+    mostrarEstado('El CSV debe incluir una columna «texto» (o «text»).', "warn");
+    return;
   }
 
-  const resultados = textos.map((t) => {
-    const prep = preprocess.preprocesoTexto(t);
-    const vec = vectorize.vectorizar(prep);
-    const rNB = nb.predecir(vec);
-    const rSens = sensationalism.analizar(t);
-    const rSent = sentimentLex.analizar(t);
-    return {
-      texto: t,
-      categoria: rNB.label,
-      tono: rSens.label,
-      sentimiento: rSent.label,
-    };
-  });
+  const textos = filas.slice(1).map((fila) => (fila[textoIdx] ?? "").trim()).filter(Boolean);
+  if (!textos.length) {
+    mostrarEstado("No se encontró texto en la columna «texto».", "warn");
+    return;
+  }
+
+  // Procesado por chunks: cede el hilo principal entre tandas para que la UI
+  // siga respondiendo con CSVs grandes y se pueda mostrar el progreso.
+  const TAMANO_TANDA = 25;
+  const resultados = [];
+  const progreso = document.getElementById("progreso-modelos");
+
+  try {
+    for (let i = 0; i < textos.length; i += TAMANO_TANDA) {
+      const tanda = textos.slice(i, i + TAMANO_TANDA);
+      for (const t of tanda) {
+        const prep = preprocess.preprocesoTexto(t);
+        const vec = vectorize.vectorizar(prep);
+        const rNB = nb.predecir(vec);
+        const rLogReg = logreg.predecir(vec);
+        const rTema = modelosCargados.lda ? lda.predecirTema(prep) : null;
+        const rSens = sensationalism.analizar(t);
+        const rSent = sentimentLex.analizar(t);
+        resultados.push({
+          texto: t,
+          categoria: rNB.label,
+          logreg: rLogReg.label,
+          tema: rTema ? `Tema ${rTema.topicId}` : "—",
+          tono: rSens.label,
+          sentimiento: rSent.label,
+        });
+      }
+
+      const hechos = Math.min(i + TAMANO_TANDA, textos.length);
+      if (progreso) {
+        actualizarProgresoLote(progreso, hechos, textos.length);
+      } else {
+        mostrarEstado(`Procesando CSV: ${hechos}/${textos.length}…`, "info");
+      }
+      await new Promise((r) => setTimeout(r, 0));
+    }
+  } catch (e) {
+    console.error(e);
+    mostrarEstado("Error procesando el CSV: " + e.message, "error");
+    anunciar("Error procesando el CSV: " + e.message);
+    return;
+  } finally {
+    ocultarProgresoCarga();
+  }
 
   renderResumenLote(resultados);
   mostrarEstado(`CSV procesado: ${resultados.length} noticias.`, "ok");
+  anunciar(`CSV procesado: ${resultados.length} noticias.`);
+}
+
+/** Barra de progreso del modo lote, reutilizando el contenedor de modelos. */
+function actualizarProgresoLote(cont, hechos, total) {
+  const pct = total ? (hechos / total) * 100 : 100;
+  const etiqueta = `Procesando CSV: ${hechos} de ${total} noticias`;
+  cont.innerHTML = `
+    <div class="progreso-modelos-head">
+      <span class="progreso-modelos-label">${etiqueta}</span>
+      <span class="progreso-modelos-pct">${pct.toFixed(0)}%</span>
+    </div>
+    <div
+      class="progreso-modelos-track"
+      role="progressbar"
+      aria-label="${etiqueta}"
+      aria-valuemin="0"
+      aria-valuemax="100"
+      aria-valuenow="${pct.toFixed(0)}"
+    >
+      <div class="progreso-modelos-fill" style="width:${pct}%"></div>
+    </div>`;
+  cont.style.display = "block";
+}
+
+/** Descarga los resultados del lote como CSV (con comillas y escape RFC 4180). */
+function descargarLoteCSV(resultados) {
+  const celda = (v) => `"${String(v).replace(/"/g, '""')}"`;
+  const lineas = [
+    ["id", "texto", "categoria_nb", "categoria_logreg", "tema_lda", "tono", "sentimiento"]
+      .join(","),
+    ...resultados.map((r, i) =>
+      [i, r.texto, r.categoria, r.logreg, r.tema, r.tono, r.sentimiento].map(celda).join(",")
+    ),
+  ];
+  const blob = new Blob(["﻿" + lineas.join("\r\n")], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "resultados_lote.csv";
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 function renderResumenLote(resultados) {
@@ -656,30 +907,39 @@ function renderResumenLote(resultados) {
   dibujarDonut(
     document.getElementById("lote-tono-donut"),
     norm(tonoDist),
-    { informativo: "#0f766e", sensacionalista: "#be123c" },
+    colorTono(),
     ""
   );
 
   const tabla = document.getElementById("lote-tabla");
   tabla.innerHTML = `
     <table>
-      <thead><tr><th>#</th><th>Texto</th><th>Categoría</th><th>Tono</th><th>Sent.</th></tr></thead>
+      <thead><tr><th>#</th><th>Texto</th><th>NB</th><th>LogReg</th><th>Tema LDA</th><th>Tono</th><th>Sent.</th></tr></thead>
       <tbody>
         ${resultados
           .slice(0, 20)
-          .map(
-            (r, i) => `
+          .map((r, i) => {
+            const resumen = escaparHTML(r.texto.slice(0, 60)) + (r.texto.length > 60 ? "..." : "");
+            return `
           <tr>
             <td>${i + 1}</td>
-            <td title="${r.texto.replace(/"/g, "&quot;")}">${r.texto.slice(0, 60)}...</td>
-            <td style="color:${COLORES_CATEGORIA[r.categoria]}">${r.categoria}</td>
-            <td style="color:${r.tono === "sensacionalista" ? "#be123c" : "#0f766e"}">${r.tono}</td>
-            <td style="color:${COLORES_SENTIMIENTO[r.sentimiento]}">${r.sentimiento}</td>
-          </tr>`
-          )
+            <td title="${escaparHTML(r.texto)}">${resumen}</td>
+            <td style="color:${COLORES_CATEGORIA[r.categoria]}">${escaparHTML(r.categoria)}</td>
+            <td style="color:${COLORES_CATEGORIA[r.logreg]}">${escaparHTML(r.logreg)}</td>
+            <td class="muted">${escaparHTML(r.tema)}</td>
+            <td style="color:${colorTono()[r.tono === "sensacionalista" ? "sensacionalista" : "informativo"]}">${escaparHTML(r.tono)}</td>
+            <td style="color:${COLORES_SENTIMIENTO[r.sentimiento]}">${escaparHTML(r.sentimiento)}</td>
+          </tr>`;
+          })
           .join("")}
       </tbody>
     </table>`;
+
+  const btnDescarga = document.getElementById("lote-descargar");
+  if (btnDescarga) {
+    btnDescarga.style.display = "inline-flex";
+    btnDescarga.onclick = () => descargarLoteCSV(resultados);
+  }
 }
 
 async function cargarMetricas() {
@@ -728,6 +988,19 @@ async function cargarMetricas() {
   }
 }
 
+/**
+ * Anuncia un mensaje en la región viva global (para lectores de pantalla).
+ * Se vacía antes de escribir para que dos mensajes iguales seguidos se anuncien igual.
+ */
+function anunciar(msg) {
+  const nodo = document.getElementById("anuncio-live");
+  if (!nodo) return;
+  nodo.textContent = "";
+  window.setTimeout(() => {
+    nodo.textContent = msg;
+  }, 60);
+}
+
 function mostrarEstado(msg, tipo = "info") {
   const panel = document.querySelector(".tab-panel.active") || document;
   const nodo =
@@ -762,9 +1035,68 @@ function escaparHTML(str) {
   return div.innerHTML;
 }
 
-function actualizarProgresoCarga(tipo, prog, file) {
+/**
+ * Resuelve una custom property de :root (con alternativa para el caso raro de
+ * que no exista). Se consulta al renderizar, así que respeta el tema activo.
+ */
+function cssVar(nombre, alternativa) {
+  const valor = getComputedStyle(document.documentElement).getPropertyValue(nombre).trim();
+  return valor || alternativa;
+}
+
+/** Colores de tono (sensacionalista / informativo) según el tema activo. */
+const colorTono = () => ({
+  sensacionalista: cssVar("--danger", "#be123c"),
+  informativo: cssVar("--accent", "#0f766e"),
+});
+
+/**
+ * Progreso de descarga de modelos: barra visual global (#progreso-modelos)
+ * + mensaje de estado, salvo que se pida silencio (precarga en segundo plano).
+ * Con progreso indeterminado (prog == null) la barra se anima sin porcentaje.
+ */
+function actualizarProgresoCarga(tipo, prog, file, { silencioso = false } = {}) {
+  const cont = document.getElementById("progreso-modelos");
   const corto = file ? String(file).split("/").pop() : "";
-  mostrarEstado(`Cargando ${tipo}${corto ? `: ${corto}` : ""} (${prog.toFixed(0)}%)`, "info");
+  const etiqueta = `Cargando ${tipo}${corto ? `: ${corto}` : ""}`;
+  const indefinido = prog == null;
+  const pct = indefinido ? null : Math.max(0, Math.min(100, prog));
+
+  if (!cont) {
+    if (!silencioso) mostrarEstado(`${etiqueta} (${prog?.toFixed(0) ?? "…"}%)`, "info");
+    return;
+  }
+
+  const valor = pct == null ? "" : `<span class="progreso-modelos-pct">${pct.toFixed(0)}%</span>`;
+  cont.innerHTML = `
+    <div class="progreso-modelos-head">
+      <span class="progreso-modelos-label">${etiqueta}</span>
+      ${valor}
+    </div>
+    <div
+      class="progreso-modelos-track${indefinido ? " indeterminado" : ""}"
+      role="progressbar"
+      aria-label="${etiqueta}"
+      aria-valuemin="0"
+      aria-valuemax="100"
+      ${pct == null ? "" : `aria-valuenow="${pct.toFixed(0)}"`}
+    >
+      <div class="progreso-modelos-fill" style="${pct == null ? "" : `width:${pct}%`}"></div>
+    </div>`;
+  cont.style.display = "block";
+
+  if (!silencioso) {
+    mostrarEstado(`${etiqueta} (${pct == null ? "…" : pct.toFixed(0) + "%"})`, "info");
+  }
+}
+
+/** Oculta la barra de progreso de modelos. */
+function ocultarProgresoCarga() {
+  const cont = document.getElementById("progreso-modelos");
+  if (cont) {
+    cont.style.display = "none";
+    cont.innerHTML = "";
+  }
 }
 
 /** Badge discreto si ELECTRA truncó el texto (artículos largos vía URL). */
@@ -796,10 +1128,86 @@ function mostrarBotonesEjemplos() {
     btn.textContent = `${n.categoria} · ${n.tono === "sensacionalista" ? "S" : "I"}`;
     btn.title = n.texto.slice(0, 80);
     btn.onclick = () => {
-      document.getElementById("input-texto").value = n.texto;
+      const area = document.getElementById("input-texto");
+      area.value = n.texto;
+      area.focus();
+      mostrarEstado(`Ejemplo de ${n.categoria} cargado. Pulsa «Analizar noticia».`, "info");
     };
     cont.appendChild(btn);
   });
+}
+
+/**
+ * Botones de URL de ejemplo del panel "Por URL". Rellenan el input sin lanzar
+ * el análisis, para que el usuario vea el flujo completo.
+ */
+function mostrarEjemplosURL() {
+  const cont = document.getElementById("ejemplos-url");
+  if (!cont) return;
+  // Portadas de medios en español: existen de forma estable y permiten ver el
+  // aviso del extractor cuando la página no es un artículo (botón "forzar").
+  const urls = [
+    ["BBC Mundo (portada)", "https://www.bbc.com/mundo"],
+    ["El País (portada)", "https://elpais.com/"],
+  ];
+  cont.innerHTML = '<span class="ejemplos-label">Ejemplos</span>';
+  urls.forEach(([nombre, url]) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "btn-ejemplo";
+    btn.textContent = nombre;
+    btn.title = url;
+    btn.onclick = () => {
+      const input = document.getElementById("input-url");
+      input.value = url;
+      input.focus();
+    };
+    cont.appendChild(btn);
+  });
+}
+
+/**
+ * Activa una pestaña y su panel (patrón ARIA tabs).
+ * Gestiona .active, aria-selected y el roving tabindex.
+ */
+function activarTab(tab, tabs) {
+  tabs.forEach((t) => {
+    const activo = t === tab;
+    t.classList.toggle("active", activo);
+    t.setAttribute("aria-selected", activo ? "true" : "false");
+    t.tabIndex = activo ? 0 : -1;
+  });
+  document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
+  const panel = document.getElementById(tab.dataset.target);
+  if (panel) panel.classList.add("active");
+  // El skip-link debe llevar siempre al panel visible (los ocultos no son enfocables).
+  const skip = document.querySelector(".skip-link");
+  if (skip) skip.setAttribute("href", "#" + tab.dataset.target);
+  if (tab.dataset.target === "panel-notebook") {
+    ensureNotebookLoaded();
+  }
+}
+
+/**
+ * Navegación por teclado del tablist: ←/→ (y ↑/↓ en vertical), Home, End.
+ * La tecla no se propaga para no hacer scroll de la página.
+ */
+function navegarTabs(e, tab, tabs) {
+  const teclas = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"];
+  if (!teclas.includes(e.key)) return;
+  e.preventDefault();
+
+  const idx = tabs.indexOf(tab);
+  let destino = idx;
+  if (e.key === "ArrowLeft" || e.key === "ArrowUp") destino = (idx - 1 + tabs.length) % tabs.length;
+  else if (e.key === "ArrowRight" || e.key === "ArrowDown") destino = (idx + 1) % tabs.length;
+  else if (e.key === "Home") destino = 0;
+  else if (e.key === "End") destino = tabs.length - 1;
+
+  const siguiente = tabs[destino];
+  if (!siguiente || siguiente === tab) return;
+  activarTab(siguiente, tabs);
+  siguiente.focus();
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -808,8 +1216,27 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (e.ctrlKey && e.key === "Enter") analizarTexto();
   });
 
+  const btnSent = document.getElementById("btn-precargar-sentimiento");
+  if (btnSent) {
+    btnSent.addEventListener("click", async () => {
+      if (cargandoSentimiento) return;
+      cargandoSentimiento = true;
+      actualizarBotonPrecargaSentimiento();
+      mostrarEstado("Precargando RoBERTuito (~25 MB)…", "info");
+      const ok = await cargarModeloSentimiento();
+      cargandoSentimiento = false;
+      if (ok) {
+        mostrarEstado("Modelo de sentimiento listo.", "ok");
+        anunciar("Modelo de sentimiento listo.");
+      } else {
+        mostrarEstado("No se pudo cargar RoBERTuito; se usará el léxico.", "warn");
+      }
+    });
+  }
+
   const btnURL = document.getElementById("btn-analizar-url");
   if (btnURL) btnURL.addEventListener("click", analizarURL);
+  mostrarEjemplosURL();
   const inputURL = document.getElementById("input-url");
   if (inputURL) {
     inputURL.addEventListener("keydown", (e) => {
@@ -822,16 +1249,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (e.target.files[0]) analizarCSV(e.target.files[0]);
   });
 
-  document.querySelectorAll(".tab").forEach((tab) => {
-    tab.addEventListener("click", () => {
-      document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
-      document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
-      tab.classList.add("active");
-      document.getElementById(tab.dataset.target).classList.add("active");
-      if (tab.dataset.target === "panel-notebook") {
-        ensureNotebookLoaded();
-      }
-    });
+  const tabs = [...document.querySelectorAll(".tab")];
+  tabs.forEach((tab) => {
+    tab.addEventListener("click", () => activarTab(tab, tabs));
+    tab.addEventListener("keydown", (e) => navegarTabs(e, tab, tabs));
   });
 
   await inicializar();
