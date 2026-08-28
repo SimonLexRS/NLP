@@ -4,7 +4,7 @@
 PYTHON ?= python3
 PIP ?= pip
 
-.PHONY: help setup data train train-classic evaluate export export-js export-onnx web serve deploy clean
+.PHONY: help setup data train train-classic evaluate evaluate-classic export export-js export-onnx check web serve deploy clean
 
 help: ## Mostrar ayuda
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
@@ -36,6 +36,10 @@ export-js: ## Exportar pesos de modelos clasicos a JSON
 
 export-onnx: ## Exportar transformer a ONNX cuantizado
 	$(PYTHON) backend/export/export_onnx.py
+
+check: ## Verificar tests del backend y el contrato backend -> web/assets/
+	$(PYTHON) -m unittest discover -s backend/tests -t backend -v
+	$(PYTHON) backend/train/check_assets.py
 
 web: export ## Re-exportar modelos y preparar web/ para despliegue
 	@echo "Sitio listo en web/. Ejecuta 'make serve' para probar localmente."

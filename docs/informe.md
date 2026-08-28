@@ -21,15 +21,15 @@ Esto es útil para agregadores de noticias, monitorización de medios y filtrado
 
 ## 3. Datos
 
-Se generó un **dataset sintético** de 600 noticias en español (`backend/data/generate_dataset.py`), diseñado para evitar la separación trivial que produciría métricas perfectas:
+Se generó un **dataset sintético** de 1500 noticias en español (`backend/data/generate_dataset.py`), diseñado para evitar la separación trivial que produciría métricas perfectas:
 
-- **7 categorías** balanceadas (~85 muestras cada una).
+- **7 categorías** balanceadas (~214 muestras cada una).
 - **Sujetos compartidos** entre categorías ("el gobierno", "el presidente", "los expertos" aparecen en política, economía, salud...), lo que obliga a los modelos a atender el contexto (la acción), no solo palabras aisladas.
 - **2 tonos**: 60% informativo / 40% sensacionalista.
 - **3 sentimientos**: 40% positivo / 40% negativo / 20% neutro.
 - **Ruido**: frases de relleno neutras, duplicaciones ocasionales de palabras.
 
-**División**: 432 train / 84 val / 84 test, estratificada por categoría.
+**División**: 1052 train / 224 val / 224 test (15% val, 15% test), estratificada por categoría.
 
 ## 4. Pipeline
 
@@ -84,14 +84,16 @@ Reglas léxicas: patrones clickbait al inicio, palabras emocionales, conteo de e
 
 | Modelo | Tipo | Accuracy | Precision (macro) | Recall (macro) | F1 (macro) |
 |--------|------|----------|-------------------|----------------|------------|
-| Naive Bayes (Multinomial) | Clásico | 97.62% | 97.80% | 97.62% | 97.61% |
-| Logistic Regression | Clásico | 92.86% | 93.52% | 92.86% | 92.51% |
+| Naive Bayes (Multinomial) | Clásico | 97.32% | 97.41% | 97.32% | 97.33% |
+| Logistic Regression | Clásico | 98.21% | 98.29% | 98.21% | 98.21% |
 | **Transformer (ELECTRA-small)** | **Neuronal** | **100.00%** | **100.00%** | **100.00%** | **100.00%** |
+
+Set de test: 224 noticias, 7 categorías (32 por clase).
 
 **Análisis**:
 - El Transformer supera a ambos modelos clásicos, como es de esperar: captura contexto y semántica que los modelos basados en TF-IDF no pueden.
-- Naive Bayes supera a Logistic Regression porque las palabras distintivas por categoría (ej. "futbol", "bolsa", "hospital") son señales léxicas fuertes que NB aprovecha eficazmente con TF-IDF.
-- Los errores de los clásicos ocurren en noticias con sujetos ambiguos donde la acción no es suficientemente distintiva.
+- Logistic Regression supera a Naive Bayes en este set: con 224 noticias y vocabulario acotado, la frontera lineal regularizada generaliza mejor que la asunción de independencia condicional de NB.
+- Los errores de los clásicos (matrices de confusión, §7) se concentran en internacional y cultura, cuyos vocabularios solapan con política y economía.
 
 ## 8. Arquitectura web
 
