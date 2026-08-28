@@ -10,10 +10,9 @@ mantiene para el pipeline Python de entrenamiento/evaluacion y para exportar
 el lexico (util como fallback y para inspeccion).
 """
 import json
-from sklearn.pipeline import make_pipeline
-from sklearn.linear_model import LogisticRegression
 
-from .vectorize import crear_tfidf
+# Importacion perezosa de sklearn: solo la usa entrenar_sentimiento_ml, asi el
+# lexico y su exportacion funcionan sin sklearn instalado.
 
 # Léxico de polaridad en espanol (palabra -> polaridad en [-1, 1]).
 LEX = {
@@ -114,6 +113,11 @@ def sentimiento_lexico(texto: str) -> dict:
 
 def entrenar_sentimiento_ml(textos, etiquetas, max_features=3000):
     """LogisticRegression sobre TF-IDF para sentimiento (3 clases)."""
+    from sklearn.pipeline import make_pipeline
+    from sklearn.linear_model import LogisticRegression
+
+    from .vectorize import crear_tfidf
+
     pipe = make_pipeline(
         crear_tfidf(max_features=max_features),
         LogisticRegression(max_iter=1000, C=1.0, random_state=42),
