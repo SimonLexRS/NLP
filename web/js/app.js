@@ -912,6 +912,12 @@ function renderResumenLote(resultados) {
   );
 
   const tabla = document.getElementById("lote-tabla");
+  const tituloDetalle =
+    resultados.length > 20
+      ? `Detalle (primeras 20 de ${resultados.length})`
+      : "Detalle (primeras 20)";
+  const head = document.querySelector("#panel-lote .lote-head h3");
+  if (head) head.textContent = tituloDetalle;
   tabla.innerHTML = `
     <table>
       <thead><tr><th>#</th><th>Texto</th><th>NB</th><th>LogReg</th><th>Tema LDA</th><th>Tono</th><th>Sent.</th></tr></thead>

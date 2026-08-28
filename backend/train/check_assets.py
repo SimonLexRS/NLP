@@ -31,6 +31,7 @@ OBLIGATORIOS = [
     "sensationalism_rules.json",
     "sample_news.json",
     "metrics.json",
+    "notebooks/model_comparison.ipynb",
 ]
 
 # Claves que consumen naive_bayes.js / logreg.js / lda.js / sentiment_lexicon.js /
@@ -139,6 +140,19 @@ def check_sample_news():
         check("informativo" in tonos and "sensacionalista" in tonos, f"sample_news.json: {cat} tiene ejemplo informativo y sensacionalista")
 
 
+def check_notebook():
+    """El visor (notebook_viewer.js) y la descarga consumen el .ipynb."""
+    ruta = WEB_ASSETS / "notebooks" / "model_comparison.ipynb"
+    if not ruta.exists():
+        return  # Ya se avisa en el bloque de obligatorios.
+    try:
+        data = cargar("notebooks/model_comparison.ipynb")
+        check("cells" in data and "nbformat" in data, "model_comparison.ipynb es un notebook valido (cells + nbformat)")
+        check(len(data.get("cells", [])) > 0, f"model_comparison.ipynb tiene celdas ({len(data.get('cells', []))})")
+    except (ValueError, OSError) as e:
+        check(False, f"model_comparison.ipynb no es JSON legible: {e}")
+
+
 def main():
     print("=" * 60)
     print("VERIFICANDO CONTRATO backend -> web/assets/")
@@ -184,6 +198,10 @@ def main():
     print("\n[6/6] Ejemplos de noticias")
     if (WEB_ASSETS / "sample_news.json").exists():
         check_sample_news()
+
+    # 7. Notebook del visor.
+    print("\n[7/7] Notebook del visor")
+    check_notebook()
 
     print("\n" + "=" * 60)
     if fallos:
