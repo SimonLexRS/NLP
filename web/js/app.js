@@ -83,7 +83,23 @@ async function inicializar() {
     actualizarBotonPrecargaSentimiento();
   } catch (e) {
     console.error(e);
-    mostrarEstado("Error cargando modelos: " + e.message, "error");
+    const msg = "Error cargando modelos: " + e.message;
+    mostrarEstado(msg, "error");
+    anunciar(msg);
+    // Sin los modelos clásicos la app no sirve: ofrecer reintento sin recargar.
+    const panel = document.querySelector(".tab-panel.active") || document;
+    const nodo = panel.querySelector(".estado") || document.getElementById("estado");
+    if (nodo && !nodo.querySelector(".btn-reintentar")) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "btn btn-secondary btn-reintentar";
+      btn.textContent = "Reintentar";
+      btn.addEventListener("click", () => {
+        btn.remove();
+        inicializar();
+      });
+      nodo.appendChild(btn);
+    }
   }
 }
 
@@ -1257,7 +1273,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const tabs = [...document.querySelectorAll(".tab")];
   tabs.forEach((tab) => {
-    tab.addEventListener("click", () => activarTab(tab, tabs));
+    tab.addEventListener("click", () => {
+      // Safari no enfoca los botones al hacer clic: si el foco estaba dentro del
+      // panel anterior (p. ej. el textarea), al ocultarse se pierde y cae en body.
+      tab.focus();
+      activarTab(tab, tabs);
+    });
     tab.addEventListener("keydown", (e) => navegarTabs(e, tab, tabs));
   });
 

@@ -28,7 +28,7 @@
   --surface-raised: #eef1f4;
   --border: #d5dbe3;
   --border-strong: #b8c0cc;
-  --muted: #64748b;
+  --muted: #55657a;
   --text: var(--ink);
   --accent: #0f766e;
   --accent-hover: #0d9488;
@@ -551,6 +551,9 @@ input[type="url"]:focus {
   background: var(--estado-error-fondo, #fff1f2);
   color: var(--estado-error-texto, #9f1239);
   border: 1px solid var(--estado-error-borde, #fecdd3);
+}
+.estado .btn-reintentar {
+  margin-top: var(--space-3);
 }
 
 /* ---------- Resultados ---------- */
