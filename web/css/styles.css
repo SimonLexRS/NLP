@@ -1840,11 +1840,13 @@ tr:hover {
   color: #64748b;
   margin-top: 4px;
 }
-.footer a {
+/* Los .share-btn (bloque de compartir) se excluyen para que esta regla
+   genérica (0,1,1) no gane a .share-btn (0,1,0) en color ni en hover. */
+.footer a:not(.share-btn) {
   color: #7dd3c7;
   text-decoration: none;
 }
-.footer a:hover {
+.footer a:not(.share-btn):hover {
   text-decoration: underline;
 }
 .footer-credits {
