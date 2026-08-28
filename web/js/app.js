@@ -1273,12 +1273,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const tabs = [...document.querySelectorAll(".tab")];
   tabs.forEach((tab) => {
-    tab.addEventListener("click", () => {
-      // Safari no enfoca los botones al hacer clic: si el foco estaba dentro del
-      // panel anterior (p. ej. el textarea), al ocultarse se pierde y cae en body.
-      tab.focus();
-      activarTab(tab, tabs);
-    });
+    tab.addEventListener("click", () => activarTab(tab, tabs));
     tab.addEventListener("keydown", (e) => navegarTabs(e, tab, tabs));
   });
 
