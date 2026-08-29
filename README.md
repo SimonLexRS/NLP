@@ -124,6 +124,7 @@ El workflow [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-page
 - No abras el `index.html` con `file://`: la Cache API no funciona y transformers.js mostrará avisos.
 - Local: `make serve` → `http://localhost:8090` (contexto seguro).
 - Las rutas de assets son relativas a la página; funcionan en project pages (`/NLP/`).
+- **Tema claro/oscuro:** botón en la cabecera; persiste en `localStorage["pln-theme"]`. Primera visita sigue al sistema (`prefers-color-scheme`); la elección explícita del usuario gana al sistema.
 
 ## 📁 Estructura
 

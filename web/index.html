@@ -1,16 +1,33 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Clasificador de Noticias | NLP · PLN</title>
   <meta name="description" content="Herramienta NLP: clasifica noticias en español por categoría, tono y sentimiento. Naive Bayes, Logistic Regression y Transformer ELECTRA en el navegador." />
   <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
-  <meta name="theme-color" content="#0b1220" />
+  <meta name="theme-color" id="meta-theme-color" content="#f4f6f8" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/styles.css?v=20260828b" />
+  <script>
+    // Fija el tema antes del primer paint para evitar el destello (FOUC).
+    // "light" ya está en el atributo; solo lo cambiamos si procede.
+    (function () {
+      try {
+        var t = localStorage.getItem("pln-theme");
+        if (t !== "dark" && t !== "light") {
+          t = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
+            ? "dark"
+            : "light";
+        }
+        document.documentElement.setAttribute("data-theme", t);
+      } catch (_) {
+        /* localStorage o matchMedia no disponibles: se queda "light". */
+      }
+    })();
+  </script>
+  <link rel="stylesheet" href="css/styles.css?v=20260829a" />
   <script type="importmap">
   {
     "imports": {
@@ -29,7 +46,21 @@
         <h1 class="brand-title">Clasificador de Noticias</h1>
         <p class="subtitle">Pipeline NLP: categoría · tono · sentimiento — 100% en el navegador</p>
       </div>
-      <p class="header-meta">Universidad Católica Boliviana · 2026</p>
+      <div class="header-actions">
+        <button type="button" id="btn-tema" class="btn-tema" aria-pressed="false" aria-label="Activar modo oscuro" title="Cambiar tema">
+          <svg class="icono-tema icono-luna" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+            <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" fill="currentColor"/>
+          </svg>
+          <svg class="icono-tema icono-sol" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+            <circle cx="12" cy="12" r="4.2" fill="currentColor"/>
+            <g stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+              <path d="M12 2.6v2.6M12 18.8v2.6M2.6 12h2.6M18.8 12h2.6M5.4 5.4l1.9 1.9M16.7 16.7l1.9 1.9M18.6 5.4l-1.9 1.9M7.3 16.7l-1.9 1.9"/>
+            </g>
+          </svg>
+          <span class="sr-only">Cambiar entre modo claro y oscuro</span>
+        </button>
+        <p class="header-meta">Universidad Católica Boliviana · 2026</p>
+      </div>
     </div>
   </header>
 
@@ -431,6 +462,6 @@
     </div>
   </footer>
 
-  <script type="module" src="js/app.js?v=20260828b"></script>
+  <script type="module" src="js/app.js?v=20260829a"></script>
 </body>
 </html>

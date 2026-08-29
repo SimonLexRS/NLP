@@ -12,6 +12,7 @@ import * as transformer from "./transformer.js";
 import { extraerNoticiaDeURL, validarEsNoticia } from "./url_extractor.js";
 import * as pv from "./pipeline_viz.js";
 import { ensureNotebookLoaded } from "./notebook_viewer.js";
+import { initTheme } from "./theme.js";
 import {
   dibujarBarras,
   dibujarDonut,
@@ -1211,6 +1212,12 @@ function navegarTabs(e, tab, tabs) {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
+  try {
+    initTheme();
+  } catch (_) {
+    /* El tema nunca debe bloquear el arranque de la herramienta. */
+  }
+
   document.getElementById("btn-analizar").addEventListener("click", analizarTexto);
   document.getElementById("input-texto").addEventListener("keydown", (e) => {
     if (e.ctrlKey && e.key === "Enter") analizarTexto();
