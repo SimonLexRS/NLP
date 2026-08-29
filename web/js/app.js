@@ -590,11 +590,11 @@ function renderResultadosClasicos(texto, rNB, rLogReg, rSens, rSentLex, rTema) {
   const catLabel = el("cat-label");
   const catBar = el("cat-bar");
   catLabel.textContent = rNB.label;
-  catLabel.style.color = COLORES_CATEGORIA[rNB.label] || cssVar("--ink", "#0f172a");
+  catLabel.style.color = COLORES_CATEGORIA[rNB.label] || "var(--ink)";
   dibujarBarraConfianza(
     catBar,
     rNB.confidence,
-    COLORES_CATEGORIA[rNB.label] || cssVar("--accent", "#0f766e")
+    COLORES_CATEGORIA[rNB.label] || "var(--accent)"
   );
 
   dibujarBarras(el("cat-dist-nb"), rNB.scores, COLORES_CATEGORIA);
@@ -617,7 +617,7 @@ function renderResultadosClasicos(texto, rNB, rLogReg, rSens, rSentLex, rTema) {
 
   const sentLabel = el("sent-label");
   sentLabel.textContent = rSentLex.label;
-  sentLabel.style.color = COLORES_SENTIMIENTO[rSentLex.label] || "#64748b";
+  sentLabel.style.color = COLORES_SENTIMIENTO[rSentLex.label] || "var(--muted)";
   el("sent-score").textContent = `Intensidad: ${(rSentLex.score * 100).toFixed(0)}%`;
   dibujarDonut(
     el("sent-donut-lex"),
@@ -655,7 +655,7 @@ function renderTemas(rTema) {
 
   const label = el("tema-label");
   label.textContent = `Tema ${rTema.topicId}`;
-  label.style.color = COLORES_TEMAS[`Tema ${rTema.topicId}`] || cssVar("--accent", "#0f766e");
+  label.style.color = COLORES_TEMAS[`Tema ${rTema.topicId}`] || "var(--accent)";
   sec.style.display = "block";
 }
 
@@ -663,11 +663,11 @@ function renderResultadosTransformer(rTrans, rSentONNX) {
   if (rTrans && el("trans-section")) {
     const transLabel = el("trans-label");
     transLabel.textContent = rTrans.label;
-    transLabel.style.color = COLORES_CATEGORIA[rTrans.label] || cssVar("--ink", "#0f172a");
+    transLabel.style.color = COLORES_CATEGORIA[rTrans.label] || "var(--ink)";
     dibujarBarraConfianza(
       el("trans-bar"),
       rTrans.confidence,
-      COLORES_CATEGORIA[rTrans.label] || cssVar("--accent", "#0f766e")
+      COLORES_CATEGORIA[rTrans.label] || "var(--accent)"
     );
     dibujarBarras(el("cat-dist-trans"), rTrans.scores, COLORES_CATEGORIA);
     el("trans-section").style.display = "block";
@@ -676,7 +676,7 @@ function renderResultadosTransformer(rTrans, rSentONNX) {
   if (rSentONNX) {
     const sentONNXLabel = el("sent-onnx-label");
     sentONNXLabel.textContent = rSentONNX.label;
-    sentONNXLabel.style.color = COLORES_SENTIMIENTO[rSentONNX.label] || "#64748b";
+    sentONNXLabel.style.color = COLORES_SENTIMIENTO[rSentONNX.label] || "var(--muted)";
     el("sent-onnx-score").textContent = `Confianza: ${(rSentONNX.confidence * 100).toFixed(0)}%`;
     dibujarDonut(el("sent-donut-onnx"), rSentONNX.scores, COLORES_SENTIMIENTO, rSentONNX.label);
     el("sent-onnx-section").style.display = "block";
@@ -692,7 +692,7 @@ function renderConsenso(rNB, rLogReg, rTrans, rSens, rSent, veredicto) {
   cons.innerHTML = `
     <div class="consenso-hero">
       <span class="consenso-hero-label">Veredicto NLP · Categoría</span>
-      <span class="consenso-hero-valor" style="color:${COLORES_CATEGORIA[consenso] || cssVar("--ink", "#0f172a")}">${consenso}</span>
+      <span class="consenso-hero-valor" style="color:${COLORES_CATEGORIA[consenso] || "var(--ink)"}">${consenso}</span>
       ${reason ? `<span class="consenso-hero-reason muted">${reason}</span>` : ""}
     </div>
     <div class="consenso-grid">
@@ -1036,19 +1036,11 @@ function escaparHTML(str) {
   return div.innerHTML;
 }
 
-/**
- * Resuelve una custom property de :root (con alternativa para el caso raro de
- * que no exista). Se consulta al renderizar, así que respeta el tema activo.
- */
-function cssVar(nombre, alternativa) {
-  const valor = getComputedStyle(document.documentElement).getPropertyValue(nombre).trim();
-  return valor || alternativa;
-}
-
-/** Colores de tono (sensacionalista / informativo) según el tema activo. */
+/** Colores de tono (sensacionalista / informativo). Se devuelven como var()
+ * CSS, no como hex, para que lo ya renderizado siga al tema activo. */
 const colorTono = () => ({
-  sensacionalista: cssVar("--danger", "#be123c"),
-  informativo: cssVar("--accent", "#0f766e"),
+  sensacionalista: "var(--danger)",
+  informativo: "var(--accent)",
 });
 
 /**

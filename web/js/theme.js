@@ -33,9 +33,10 @@ export function setTheme(next, { persist = true } = {}) {
 
   const btn = document.getElementById("btn-tema");
   if (btn) {
+    // Nombre accesible estable ("Modo oscuro"): solo cambia aria-pressed,
+    // que es la señal que un toggle button debe dar a los lectores de pantalla.
     const oscuro = theme === "dark";
     btn.setAttribute("aria-pressed", oscuro ? "true" : "false");
-    btn.setAttribute("aria-label", oscuro ? "Activar modo claro" : "Activar modo oscuro");
     btn.setAttribute("data-tema-icono", oscuro ? "moon" : "sun");
   }
   actualizarMeta(theme);
