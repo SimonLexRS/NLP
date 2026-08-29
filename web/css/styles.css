@@ -51,8 +51,9 @@
   --duration-fast: 120ms;
   --duration-normal: 220ms;
 
-  /* Colores de los gráficos SVG (charts.js los lee en tiempo de ejecución,
-     así que barras y donuts siguen siendo legibles en modo oscuro). */
+  /* Colores de los gráficos SVG. charts.js y pipeline_edu.js los insertan
+     como var() en el markup (style="fill:var(--token)"), así que barras,
+     donuts y diagramas siguen siendo legibles en modo oscuro. */
   --chart-track: #e5e7eb;
   --chart-label: #374151;
   --chart-value: #6b7280;
@@ -95,9 +96,9 @@
    oscuro y aún no hay elección; queda "light" en el atributo estático si no
    hay JavaScript. Así la elección del usuario siempre gana a
    prefers-color-scheme. El header ya es oscuro por diseño, así que aquí solo
-   hay que invertir las superficies, el texto y los gráficos. charts.js lee
-   estos tokens con getComputedStyle al dibujar, así que los SVG siguen a la
-   sesión oscura. */
+   hay que invertir las superficies, el texto y los gráficos. charts.js y
+   pipeline_edu.js usan estos tokens como var() en su markup SVG, así que los
+   gráficos ya dibujados siguen al tema al alternar el botón. */
 [data-theme="dark"] {
   --ink: #e6edf5;
   --paper: #0b1220;

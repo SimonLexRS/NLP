@@ -382,32 +382,33 @@ function svgFlow(nodes) {
   let parts = "";
   nodes.forEach((n, i) => {
     const x = 16 + i * 110;
-    parts += `<rect x="${x}" y="16" width="88" height="40" rx="6" fill="#eef1f4" stroke="#0f766e" stroke-width="1.5"/>`;
-    parts += `<text x="${x + 44}" y="34" text-anchor="middle" font-size="10" font-family="IBM Plex Sans,sans-serif" fill="#0f172a" font-weight="600">${escapeHtml(n[0])}</text>`;
-    parts += `<text x="${x + 44}" y="48" text-anchor="middle" font-size="9" font-family="IBM Plex Mono,monospace" fill="#64748b">${escapeHtml(n[1])}</text>`;
+    // Colores via var() CSS para seguir al tema activo sin redibujar.
+    parts += `<rect x="${x}" y="16" width="88" height="40" rx="6" style="fill:var(--surface-raised);stroke:var(--accent)" stroke-width="1.5"/>`;
+    parts += `<text x="${x + 44}" y="34" text-anchor="middle" font-size="10" font-family="IBM Plex Sans,sans-serif" style="fill:var(--ink)" font-weight="600">${escapeHtml(n[0])}</text>`;
+    parts += `<text x="${x + 44}" y="48" text-anchor="middle" font-size="9" font-family="IBM Plex Mono,monospace" style="fill:var(--muted)">${escapeHtml(n[1])}</text>`;
     if (i < nodes.length - 1) {
       const ax = x + 92;
-      parts += `<path d="M${ax} 36 L${ax + 14} 36" stroke="#0891b2" stroke-width="2" marker-end="url(#eduArrow)"/>`;
+      parts += `<path d="M${ax} 36 L${ax + 14} 36" style="stroke:var(--signal)" stroke-width="2" marker-end="url(#eduArrow)"/>`;
     }
   });
   return `<svg viewBox="0 0 ${w} ${h}" class="edu-svg" role="img" aria-label="Stage flow diagram">${markerDefs()}${parts}</svg>`;
 }
 
 function markerDefs() {
-  return `<defs><marker id="eduArrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#0891b2"/></marker></defs>`;
+  return `<defs><marker id="eduArrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" style="fill:var(--signal)"/></marker></defs>`;
 }
 
 function svgBarsSketch(label, barLabels) {
   const [a, b, c] = barLabels;
   return `<svg viewBox="0 0 340 90" class="edu-svg" role="img" aria-label="Probability bars">
     ${markerDefs()}
-    <text x="8" y="14" font-size="10" fill="#64748b" font-family="IBM Plex Mono,monospace">${escapeHtml(label)}</text>
-    <rect x="8" y="28" width="140" height="12" rx="3" fill="#0f766e" opacity="0.9"/>
-    <rect x="8" y="48" width="95" height="12" rx="3" fill="#0891b2" opacity="0.75"/>
-    <rect x="8" y="68" width="55" height="12" rx="3" fill="#94a3b8" opacity="0.7"/>
-    <text x="160" y="38" font-size="10" fill="#0f172a" font-family="IBM Plex Sans,sans-serif">${escapeHtml(a)}</text>
-    <text x="160" y="58" font-size="10" fill="#64748b" font-family="IBM Plex Sans,sans-serif">${escapeHtml(b)}</text>
-    <text x="160" y="78" font-size="10" fill="#64748b" font-family="IBM Plex Sans,sans-serif">${escapeHtml(c)}</text>
+    <text x="8" y="14" font-size="10" style="fill:var(--muted)" font-family="IBM Plex Mono,monospace">${escapeHtml(label)}</text>
+    <rect x="8" y="28" width="140" height="12" rx="3" style="fill:var(--accent)" opacity="0.9"/>
+    <rect x="8" y="48" width="95" height="12" rx="3" style="fill:var(--signal)" opacity="0.75"/>
+    <rect x="8" y="68" width="55" height="12" rx="3" style="fill:var(--muted)" opacity="0.7"/>
+    <text x="160" y="38" font-size="10" style="fill:var(--ink)" font-family="IBM Plex Sans,sans-serif">${escapeHtml(a)}</text>
+    <text x="160" y="58" font-size="10" style="fill:var(--muted)" font-family="IBM Plex Sans,sans-serif">${escapeHtml(b)}</text>
+    <text x="160" y="78" font-size="10" style="fill:var(--muted)" font-family="IBM Plex Sans,sans-serif">${escapeHtml(c)}</text>
   </svg>`;
 }
 
@@ -415,11 +416,11 @@ function svgBoundarySketch(L) {
   const caption =
     L === "es" ? "separador lineal en el espacio de features" : "linear separator in feature space";
   return `<svg viewBox="0 0 340 90" class="edu-svg" role="img" aria-label="Linear decision boundary">
-    <circle cx="70" cy="55" r="5" fill="#0f766e"/><circle cx="95" cy="40" r="5" fill="#0f766e"/>
-    <circle cx="55" cy="35" r="5" fill="#0f766e"/><circle cx="220" cy="55" r="5" fill="#be123c"/>
-    <circle cx="250" cy="40" r="5" fill="#be123c"/><circle cx="235" cy="70" r="5" fill="#be123c"/>
-    <line x1="130" y1="80" x2="200" y2="15" stroke="#0891b2" stroke-width="2" stroke-dasharray="4 3"/>
-    <text x="8" y="14" font-size="10" fill="#64748b" font-family="IBM Plex Mono,monospace">${escapeHtml(caption)}</text>
+    <circle cx="70" cy="55" r="5" style="fill:var(--accent)"/><circle cx="95" cy="40" r="5" style="fill:var(--accent)"/>
+    <circle cx="55" cy="35" r="5" style="fill:var(--accent)"/><circle cx="220" cy="55" r="5" style="fill:var(--danger)"/>
+    <circle cx="250" cy="40" r="5" style="fill:var(--danger)"/><circle cx="235" cy="70" r="5" style="fill:var(--danger)"/>
+    <line x1="130" y1="80" x2="200" y2="15" style="stroke:var(--signal)" stroke-width="2" stroke-dasharray="4 3"/>
+    <text x="8" y="14" font-size="10" style="fill:var(--muted)" font-family="IBM Plex Mono,monospace">${escapeHtml(caption)}</text>
   </svg>`;
 }
 
@@ -448,21 +449,21 @@ function svgTransformerSketch(L) {
         };
   return `<svg viewBox="0 0 420 110" class="edu-svg" role="img" aria-label="Simplified Transformer block">
     ${markerDefs()}
-    <rect x="8" y="30" width="70" height="44" rx="6" fill="#eef1f4" stroke="#0f766e"/>
-    <text x="43" y="48" text-anchor="middle" font-size="9" fill="#0f172a" font-weight="600">${t.tokens}</text>
-    <text x="43" y="62" text-anchor="middle" font-size="8" fill="#64748b">${t.embed}</text>
-    <path d="M82 52 L98 52" stroke="#0891b2" stroke-width="2" marker-end="url(#eduArrow)"/>
-    <rect x="102" y="18" width="120" height="68" rx="6" fill="#ecfeff" stroke="#0891b2"/>
-    <text x="162" y="36" text-anchor="middle" font-size="9" fill="#0f172a" font-weight="600">${t.block}</text>
-    <text x="162" y="52" text-anchor="middle" font-size="8" fill="#0e7490">${t.attn}</text>
-    <text x="162" y="66" text-anchor="middle" font-size="8" fill="#0e7490">${t.mlp}</text>
-    <path d="M226 52 L242 52" stroke="#0891b2" stroke-width="2" marker-end="url(#eduArrow)"/>
-    <rect x="246" y="30" width="70" height="44" rx="6" fill="#eef1f4" stroke="#0f766e"/>
-    <text x="281" y="48" text-anchor="middle" font-size="9" fill="#0f172a" font-weight="600">${t.logits}</text>
-    <text x="281" y="62" text-anchor="middle" font-size="8" fill="#64748b">${t.soft}</text>
-    <path d="M320 52 L336 52" stroke="#0891b2" stroke-width="2" marker-end="url(#eduArrow)"/>
-    <rect x="340" y="30" width="70" height="44" rx="6" fill="#dcfce7" stroke="#0f766e"/>
-    <text x="375" y="55" text-anchor="middle" font-size="9" fill="#0f172a" font-weight="600">${t.labels}</text>
+    <rect x="8" y="30" width="70" height="44" rx="6" style="fill:var(--surface-raised);stroke:var(--accent)"/>
+    <text x="43" y="48" text-anchor="middle" font-size="9" style="fill:var(--ink)" font-weight="600">${t.tokens}</text>
+    <text x="43" y="62" text-anchor="middle" font-size="8" style="fill:var(--muted)">${t.embed}</text>
+    <path d="M82 52 L98 52" style="stroke:var(--signal)" stroke-width="2" marker-end="url(#eduArrow)"/>
+    <rect x="102" y="18" width="120" height="68" rx="6" style="fill:var(--accent-subtle);stroke:var(--signal)"/>
+    <text x="162" y="36" text-anchor="middle" font-size="9" style="fill:var(--ink)" font-weight="600">${t.block}</text>
+    <text x="162" y="52" text-anchor="middle" font-size="8" style="fill:var(--signal)">${t.attn}</text>
+    <text x="162" y="66" text-anchor="middle" font-size="8" style="fill:var(--signal)">${t.mlp}</text>
+    <path d="M226 52 L242 52" style="stroke:var(--signal)" stroke-width="2" marker-end="url(#eduArrow)"/>
+    <rect x="246" y="30" width="70" height="44" rx="6" style="fill:var(--surface-raised);stroke:var(--accent)"/>
+    <text x="281" y="48" text-anchor="middle" font-size="9" style="fill:var(--ink)" font-weight="600">${t.logits}</text>
+    <text x="281" y="62" text-anchor="middle" font-size="8" style="fill:var(--muted)">${t.soft}</text>
+    <path d="M320 52 L336 52" style="stroke:var(--signal)" stroke-width="2" marker-end="url(#eduArrow)"/>
+    <rect x="340" y="30" width="70" height="44" rx="6" style="fill:var(--accent-subtle);stroke:var(--accent)"/>
+    <text x="375" y="55" text-anchor="middle" font-size="9" style="fill:var(--ink)" font-weight="600">${t.labels}</text>
   </svg>`;
 }
 
@@ -471,12 +472,12 @@ function svgToneSketch(L) {
   const b = "CAPS / !";
   const c = L === "es" ? "score → etiqueta" : "score → label";
   return `<svg viewBox="0 0 340 80" class="edu-svg" role="img" aria-label="Tone signals">
-    <rect x="10" y="20" width="90" height="40" rx="6" fill="#fff7ed" stroke="#b45309"/>
-    <text x="55" y="44" text-anchor="middle" font-size="10" fill="#9a3412">${escapeHtml(a)}</text>
-    <rect x="120" y="20" width="90" height="40" rx="6" fill="#fef2f2" stroke="#be123c"/>
-    <text x="165" y="44" text-anchor="middle" font-size="10" fill="#9f1239">${escapeHtml(b)}</text>
-    <rect x="230" y="20" width="90" height="40" rx="6" fill="#ecfdf5" stroke="#0f766e"/>
-    <text x="275" y="44" text-anchor="middle" font-size="10" fill="#115e59">${escapeHtml(c)}</text>
+    <rect x="10" y="20" width="90" height="40" rx="6" style="fill:var(--estado-warn-fondo);stroke:var(--warning)"/>
+    <text x="55" y="44" text-anchor="middle" font-size="10" style="fill:var(--estado-warn-texto)">${escapeHtml(a)}</text>
+    <rect x="120" y="20" width="90" height="40" rx="6" style="fill:var(--estado-error-fondo);stroke:var(--danger)"/>
+    <text x="165" y="44" text-anchor="middle" font-size="10" style="fill:var(--estado-error-texto)">${escapeHtml(b)}</text>
+    <rect x="230" y="20" width="90" height="40" rx="6" style="fill:var(--accent-subtle);stroke:var(--accent)"/>
+    <text x="275" y="44" text-anchor="middle" font-size="10" style="fill:var(--estado-ok-texto)">${escapeHtml(c)}</text>
   </svg>`;
 }
 
@@ -484,11 +485,11 @@ function svgVoteSketch(L) {
   const vote = L === "es" ? "voto" : "vote";
   return `<svg viewBox="0 0 340 90" class="edu-svg" role="img" aria-label="Consensus voting">
     ${markerDefs()}
-    <rect x="10" y="28" width="60" height="32" rx="5" fill="#eef1f4" stroke="#0f766e"/><text x="40" y="48" text-anchor="middle" font-size="10">NB</text>
-    <rect x="85" y="28" width="60" height="32" rx="5" fill="#eef1f4" stroke="#0f766e"/><text x="115" y="48" text-anchor="middle" font-size="10">LR</text>
-    <rect x="160" y="28" width="60" height="32" rx="5" fill="#eef1f4" stroke="#0f766e"/><text x="190" y="48" text-anchor="middle" font-size="10">TR</text>
-    <path d="M230 44 L250 44" stroke="#0891b2" stroke-width="2" marker-end="url(#eduArrow)"/>
-    <rect x="256" y="22" width="74" height="44" rx="6" fill="#dcfce7" stroke="#0f766e"/>
+    <rect x="10" y="28" width="60" height="32" rx="5" style="fill:var(--surface-raised);stroke:var(--accent)"/><text x="40" y="48" text-anchor="middle" font-size="10">NB</text>
+    <rect x="85" y="28" width="60" height="32" rx="5" style="fill:var(--surface-raised);stroke:var(--accent)"/><text x="115" y="48" text-anchor="middle" font-size="10">LR</text>
+    <rect x="160" y="28" width="60" height="32" rx="5" style="fill:var(--surface-raised);stroke:var(--accent)"/><text x="190" y="48" text-anchor="middle" font-size="10">TR</text>
+    <path d="M230 44 L250 44" style="stroke:var(--signal)" stroke-width="2" marker-end="url(#eduArrow)"/>
+    <rect x="256" y="22" width="74" height="44" rx="6" style="fill:var(--accent-subtle);stroke:var(--accent)"/>
     <text x="293" y="48" text-anchor="middle" font-size="10" font-weight="600">${escapeHtml(vote)}</text>
   </svg>`;
 }
