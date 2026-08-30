@@ -27,6 +27,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Vista previa social: el PNG (og:image) se genera desde og-image.svg en
+      # cada deploy para no versionar binarios. Las redes sociales no soportan
+      # SVG como og:image, así que og-image.png debe existir en el artefacto.
+      - name: Instalar tipografías de marca (TTF)
+        run: |
+          for pkg in @expo-google-fonts/ibm-plex-sans @expo-google-fonts/ibm-plex-mono @expo-google-fonts/source-serif-4; do
+            npm install --no-save --no-package-lock "$pkg" || echo "Sin $pkg: se usan fuentes del sistema"
+          done
+
+      - name: Renderizar og:image (1200x630)
+        run: |
+          npm install --no-save --no-package-lock @resvg/resvg-js
+          node scripts/render-og-image.mjs
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 

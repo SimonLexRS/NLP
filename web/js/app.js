@@ -84,7 +84,23 @@ async function inicializar() {
     actualizarBotonPrecargaSentimiento();
   } catch (e) {
     console.error(e);
-    mostrarEstado("Error cargando modelos: " + e.message, "error");
+    const msg = "Error cargando modelos: " + e.message;
+    mostrarEstado(msg, "error");
+    anunciar(msg);
+    // Sin los modelos clásicos la app no sirve: ofrecer reintento sin recargar.
+    const panel = document.querySelector(".tab-panel.active") || document;
+    const nodo = panel.querySelector(".estado") || document.getElementById("estado");
+    if (nodo && !nodo.querySelector(".btn-reintentar")) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "btn btn-secondary btn-reintentar";
+      btn.textContent = "Reintentar";
+      btn.addEventListener("click", () => {
+        btn.remove();
+        inicializar();
+      });
+      nodo.appendChild(btn);
+    }
   }
 }
 
@@ -143,6 +159,11 @@ async function cargarModeloSentimiento() {
     ocultarProgresoCarga();
     actualizarBotonPrecargaSentimiento();
   }
+  btn.style.display = "inline-flex";
+  btn.disabled = cargandoSentimiento;
+  btn.textContent = cargandoSentimiento
+    ? "Precargando RoBERTuito…"
+    : "Precargar modelo de sentimiento (~25 MB)";
 }
 
 /**
@@ -913,6 +934,12 @@ function renderResumenLote(resultados) {
   );
 
   const tabla = document.getElementById("lote-tabla");
+  const tituloDetalle =
+    resultados.length > 20
+      ? `Detalle (primeras 20 de ${resultados.length})`
+      : "Detalle (primeras 20)";
+  const head = document.querySelector("#panel-lote .lote-head h3");
+  if (head) head.textContent = tituloDetalle;
   tabla.innerHTML = `
     <table>
       <thead><tr><th>#</th><th>Texto</th><th>NB</th><th>LogReg</th><th>Tema LDA</th><th>Tono</th><th>Sent.</th></tr></thead>
@@ -1253,6 +1280,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     tab.addEventListener("click", () => activarTab(tab, tabs));
     tab.addEventListener("keydown", (e) => navegarTabs(e, tab, tabs));
   });
+
+  inicializarCompartir();
 
   await inicializar();
   await cargarMetricas();

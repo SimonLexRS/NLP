@@ -48,6 +48,18 @@ _MENCION_RE = re.compile(r"@\w+")
 _HASHTAG_RE = re.compile(r"#(\w+)")
 _PUNT_RE = re.compile(r"[^a-z0-9\s<>]")
 
+# Fallback de tildes cuando unidecode no esta disponible. Coherente con
+# ACCENT_MAP de web/js/preprocess.js (el texto ya esta en minusculas aqui).
+_TILDES = str.maketrans({
+    "á": "a", "é": "e", "í": "i", "ó": "o", "ú": "u", "ü": "u", "ñ": "n",
+})
+
+
+def _quitar_tildes(texto: str) -> str:
+    if _unidecode is not None:
+        return _unidecode(texto)
+    return texto.translate(_TILDES)
+
 
 def _asegurar_recursos_nltk():
     """Descarga silenciosa de recursos NLTK si no estan presentes."""
@@ -70,13 +82,11 @@ def _asegurar_recursos_nltk():
 @lru_cache(maxsize=1)
 def _stopwords_es():
     """Conjunto de stopwords en espanol, conservando negaciones."""
-    if nltk_stopwords is None:
-        # Fallback minimo si NLTK no esta disponible.
-        return _STOPWORDS_FALLBACK
     _asegurar_recursos_nltk()
     try:
         sw = set(nltk_stopwords.words("spanish"))
     except Exception:
+        # Fallback minimo si NLTK (o sus datos) no esta disponible.
         sw = set(_STOPWORDS_FALLBACK)
     sw = {w for w in sw if w not in NEGACIONES}
     return sw
@@ -127,8 +137,7 @@ def normalizar_texto(texto: str) -> str:
     texto = _MENCION_RE.sub(" user ", texto)
     # Conservar la palabra del hashtag sin el simbolo.
     texto = _HASHTAG_RE.sub(r"\1", texto)
-    if _unidecode is not None:
-        texto = _unidecode(texto)
+    texto = _quitar_tildes(texto)
     # Normalizar espacios.
     texto = re.sub(r"\s+", " ", texto).strip()
     return texto

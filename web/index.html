@@ -293,6 +293,7 @@
         <label for="csv-input" class="label">Sube un CSV con noticias (columna «texto»)</label>
         <input type="file" id="csv-input" accept=".csv" />
         <p class="hint">O usa la <a href="examples/batch_template.csv" download>plantilla de ejemplo</a>.</p>
+        <div id="estado-lote" class="estado" style="display:none;" role="status"></div>
       </div>
       <div id="lote-resultados" style="display:none;">
         <div class="grid-resultados">
@@ -451,6 +452,39 @@
     <div class="container">
       <p>Proyecto Final · Módulo de PLN · Maestría en Inteligencia Artificial</p>
       <p class="muted">Universidad Católica Boliviana «San Pablo» · 2026</p>
+
+      <!-- Compartir la página en redes sociales (la lógica vive en js/share.js) -->
+      <div class="footer-share">
+        <p class="footer-share-label">Compartir esta herramienta</p>
+        <div class="footer-share-actions">
+          <button id="btn-share-nativo" class="share-btn" type="button" style="display:none;" aria-label="Compartir esta página con las apps de tu dispositivo">
+            <svg class="share-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.7l6.8-3.9M8.6 13.3l6.8 3.9"/></svg>
+            Compartir
+          </button>
+          <a id="share-x" class="share-btn" href="https://twitter.com/intent/tweet" target="_blank" rel="noopener noreferrer" aria-label="Compartir en X (Twitter)">
+            <svg class="share-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 4l16 16M20 4L4 20"/></svg>
+            X
+          </a>
+          <a id="share-whatsapp" class="share-btn" href="https://wa.me/" target="_blank" rel="noopener noreferrer" aria-label="Compartir por WhatsApp">
+            <svg class="share-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.4 8.6 8.6 0 0 1-3.8-.9L3 21l1.9-5.4A8.4 8.4 0 1 1 21 11.5z"/></svg>
+            WhatsApp
+          </a>
+          <a id="share-linkedin" class="share-btn" href="https://www.linkedin.com/sharing/share-offsite/" target="_blank" rel="noopener noreferrer" aria-label="Compartir en LinkedIn">
+            <svg class="share-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 11v5M8 8v.01M12 16v-5M16 16v-3a2 2 0 0 0-4 0"/></svg>
+            LinkedIn
+          </a>
+          <a id="share-telegram" class="share-btn" href="https://t.me/share/url" target="_blank" rel="noopener noreferrer" aria-label="Compartir por Telegram">
+            <svg class="share-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+            Telegram
+          </a>
+          <button id="btn-copiar-enlace" class="share-btn" type="button" aria-label="Copiar enlace de esta página">
+            <svg class="share-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>
+            Copiar enlace
+          </button>
+          <span id="share-status" class="footer-share-status" role="status"></span>
+        </div>
+      </div>
+
       <p class="footer-credits">
         Desarrollado por
         <a href="https://www.linkedin.com/in/srodriguezxs/" target="_blank" rel="noopener noreferrer">Simon Alex Rodriguez</a>
